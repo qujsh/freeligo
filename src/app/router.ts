@@ -36,7 +36,7 @@ export const router = createRouter({
     },
     {
       path: "/my-interests",
-      component: () => import("../modules/account/PlaceholderPage.vue"),
+      component: () => import("../modules/account/MyInterestsPage.vue"),
     },
     {
       path: "/:pathMatch(.*)*",

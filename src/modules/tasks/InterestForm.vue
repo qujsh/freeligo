@@ -2,6 +2,9 @@
 import { ref, reactive, watch } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import type { Opportunity } from "../../domain/models";
+import { interactions, newRequestNo } from "../../services/taskInteractions";
+import { isLive } from "../../services/publicTasks";
+import RewardContent from "./RewardContent.vue";
 import { service } from "../../services";
 import { useSession } from "../account/session";
 const props = defineProps<{ item: Opportunity; open: boolean }>(),
@@ -10,7 +13,20 @@ const props = defineProps<{ item: Opportunity; open: boolean }>(),
   client = useQueryClient(),
   busy = ref(false),
   error = ref(""),
-  success = ref(false);
+  success = ref(false),
+  acknowledged = ref(false),
+  requestNo = ref(newRequestNo());
+watch(
+  () => props.open,
+  (open) => {
+    if (open) {
+      success.value = false;
+      error.value = "";
+      acknowledged.value = false;
+      requestNo.value = newRequestNo();
+    }
+  },
+);
 const form = reactive({
   experience: "",
   portfolio: "",
@@ -28,14 +44,16 @@ watch(
       question: "",
       quote: "",
     });
+    acknowledged.value = false;
     success.value = false;
     error.value = "";
   },
 );
 async function submit() {
   error.value = "";
-  if (!form.experience.trim() || !form.startDate) {
-    error.value = "请填写相关经验和可开始时间";
+  if (busy.value) return;
+  if (!form.experience.trim() || !acknowledged.value) {
+    error.value = "请填写相关经验，并确认已阅读任务条件";
     return;
   }
   if (form.portfolio && !/^https?:\/\//.test(form.portfolio)) {
@@ -45,7 +63,16 @@ async function submit() {
   session.requireLogin(async () => {
     busy.value = true;
     try {
-      await service.submit(props.item.id, session.user!, { ...form });
+      if (isLive)
+        await interactions.submit(
+          props.item.id,
+          props.item.version ?? 0,
+          form.experience,
+          acknowledged.value,
+          form,
+          requestNo.value,
+        );
+      else await service.submit(props.item.id, session.user!, { ...form });
       success.value = true;
       emit("submitted");
       await client.invalidateQueries();
@@ -70,7 +97,11 @@ async function submit() {
       v-if="success"
       icon="success"
       title="让合适的合作，从这里开始"
-      sub-title="模拟意向已保存到本机。正式产品由项目发布者选择承接人。"
+      :sub-title="
+        isLive
+          ? '意向已提交，等待发布者处理。提交不代表合作已经成立。'
+          : '模拟意向已保存到本机。'
+      "
     >
       <template #extra>
         <el-button type="primary" @click="emit('close')">
@@ -90,7 +121,7 @@ async function submit() {
       <div class="interest-task">
         <span>{{ item.category }}</span>
         <h3>{{ item.title }}</h3>
-        <strong>¥ {{ item.reward }} / {{ item.unit }}</strong>
+        <RewardContent :item="item" />
       </div>
       <form @submit.prevent="submit">
         <label>
@@ -117,7 +148,7 @@ async function submit() {
         </label>
         <label>
           可开始时间
-          <em>*</em>
+          <small>选填</small>
           <el-date-picker
             v-model="form.startDate"
             aria-label="可开始时间"
@@ -139,6 +170,9 @@ async function submit() {
           你的报价
           <el-input v-model="form.quote" />
         </label>
+        <el-checkbox v-model="acknowledged">
+          我已阅读工作范围、回报、时间与协作条件
+        </el-checkbox>
         <el-alert v-if="error" :title="error" type="error" :closable="false" />
         <div class="form-footnote">
           提交意向不代表承接成功，最终由项目发布者确认。

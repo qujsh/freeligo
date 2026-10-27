@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Ellipsis,
 } from "lucide-vue-next";
+import { interactions } from "../../services/taskInteractions";
 import { service } from "../../services";
 import { browse, categories, cities, isLive } from "../../services/publicTasks";
 import { useSession } from "../account/session";
@@ -45,11 +46,32 @@ const tabs = [
   { id: "nearby", label: "身边的机会" },
   { id: "newcomer", label: "新人可参与" },
 ];
-const categoryQuery = useQuery({queryKey:['public-categories'], queryFn:({signal})=>categories(signal)});
-const cityQuery=useQuery({queryKey:['public-cities'],queryFn:({signal})=>cities(signal)});
-const icons:Record<string,typeof Camera>={photography:Camera,design:Palette,life_service:Wrench,education:BookOpen,events:CalendarDays,technology_data:Laptop};
-const fields=computed(()=>(categoryQuery.data.value ?? []).slice(0,6).map(c=>({icon:icons[c.code] || BookOpen,title:c.name,category:c.code})));
-const unit=computed(()=>String(route.query.unit ?? 'project'));
+const categoryQuery = useQuery({
+  queryKey: ["public-categories"],
+  queryFn: ({ signal }) => categories(signal),
+});
+const cityQuery = useQuery({
+  queryKey: ["public-cities"],
+  queryFn: ({ signal }) => cities(signal),
+});
+const icons: Record<string, typeof Camera> = {
+  photography: Camera,
+  design: Palette,
+  life_service: Wrench,
+  education: BookOpen,
+  events: CalendarDays,
+  technology_data: Laptop,
+};
+const fields = computed(() =>
+  (categoryQuery.data.value ?? [])
+    .slice(0, 6)
+    .map((c) => ({
+      icon: icons[c.code] || BookOpen,
+      title: c.name,
+      category: c.code,
+    })),
+);
+const unit = computed(() => String(route.query.unit ?? "project"));
 const q = useQuery({
   queryKey: computed(() => [
     "opportunities",
@@ -63,23 +85,43 @@ const q = useQuery({
     tab.value,
     session.user?.id,
   ]),
-  queryFn: ({signal}) => browse({keyword:String(route.query.q ?? ''),category:category.value,city:city.value,mode:mode.value,budget:budget.value,unit:unit.value,newcomer:tab.value==='newcomer',sort:tab.value==='latest'?'latest':'recommended',page:1,pageSize:6},signal),
+  queryFn: ({ signal }) =>
+    browse(
+      {
+        keyword: String(route.query.q ?? ""),
+        category: category.value,
+        city: city.value,
+        mode: mode.value,
+        budget: budget.value,
+        unit: unit.value,
+        newcomer: tab.value === "newcomer",
+        sort: tab.value === "latest" ? "latest" : "recommended",
+        page: 1,
+        pageSize: 6,
+      },
+      signal,
+    ),
 });
-const favoriteIds = ref<string[]>([]);
-watch(
-  [() => session.user, q.data],
-  () => {
-    favoriteIds.value = session.user ? service.favorites(session.user) : [];
-  },
-  { immediate: true },
+const favoriteQuery = useQuery({
+  queryKey: computed(() => ["favorite-ids", session.user?.id]),
+  enabled: computed(() => isLive && !!session.user),
+  queryFn: () => interactions.favorites(),
+});
+const favoriteIds = computed(() =>
+  isLive
+    ? (favoriteQuery.data.value ?? [])
+    : session.user
+      ? service.favorites(session.user)
+      : [],
 );
+
 watch(
   () => route.query.q,
   (v) => {
     search.value = String(v ?? "");
   },
 );
-const results = computed(()=>q.data.value?.items ?? []);
+const results = computed(() => q.data.value?.items ?? []);
 const visible = results;
 function filter(key: string, value: string) {
   router.push({
@@ -103,17 +145,29 @@ function switchTab(value: string) {
   });
 }
 function open(id: string) {
-  const item = results.value.find((o) => o.id === id) ?? viewed.value.find((o) => o.id === id);
-  if (item) viewed.value = [item, ...viewed.value.filter((o) => o.id !== id)].slice(0, 8);
+  const item =
+    results.value.find((o) => o.id === id) ??
+    viewed.value.find((o) => o.id === id);
+  if (item)
+    viewed.value = [item, ...viewed.value.filter((o) => o.id !== id)].slice(
+      0,
+      8,
+    );
   if (matchMedia("(max-width: 760px)").matches) router.push(`/tasks/${id}`);
   else router.push({ query: { ...route.query, preview: id } });
 }
 async function favorite(id: string) {
-  if(isLive) { ElMessage.info("收藏功能将在后续接入"); return; }
+  if (isLive) {
+    ElMessage.info("收藏功能将在后续接入");
+    return;
+  }
   session.requireLogin(async () => {
     try {
-      await service.favorite(id, session.user!);
-      favoriteIds.value = service.favorites(session.user!);
+      if (isLive)
+        await interactions.favorite(id, !favoriteIds.value.includes(id));
+      else await service.favorite(id, session.user!);
+      await client.invalidateQueries({ queryKey: ["favorite-ids"] });
+      await client.invalidateQueries({ queryKey: ["task-state"] });
       await client.invalidateQueries({ queryKey: ["opportunities"] });
     } catch (e) {
       ElMessage.error((e as Error).message);
@@ -188,11 +242,29 @@ function findPartners() {
       <section class="home-opportunities" aria-labelledby="opportunity-heading">
         <h2 id="opportunity-heading">发现适合你的机会</h2>
         <p class="discovery-intro">从你擅长的事，找到可以开始的机会。</p>
-        <p v-if="categoryQuery.error.value" class="muted">分类加载失败 <button @click="categoryQuery.refetch()">重试</button></p>
+        <p v-if="categoryQuery.error.value" class="muted">
+          分类加载失败 <button @click="categoryQuery.refetch()">重试</button>
+        </p>
         <div class="discovery-categories" aria-label="技能分类">
-          <button :class="{ active: !category }" :aria-pressed="!category" @click="filter('category', '')"><LayoutGrid :size="21" />全部</button>
-          <button v-for="field in fields" :key="field.title" :class="{ active: category === field.category }" :aria-pressed="category === field.category" @click="filter('category', field.category)"><component :is="field.icon" :size="22" />{{ field.title }}</button>
-          <button @click="router.push('/opportunities')"><Ellipsis :size="22" />更多</button>
+          <button
+            :class="{ active: !category }"
+            :aria-pressed="!category"
+            @click="filter('category', '')"
+          >
+            <LayoutGrid :size="21" />全部
+          </button>
+          <button
+            v-for="field in fields"
+            :key="field.title"
+            :class="{ active: category === field.category }"
+            :aria-pressed="category === field.category"
+            @click="filter('category', field.category)"
+          >
+            <component :is="field.icon" :size="22" />{{ field.title }}
+          </button>
+          <button @click="router.push('/opportunities')">
+            <Ellipsis :size="22" />更多
+          </button>
         </div>
         <div class="home-discovery-toolbar">
           <div class="home-tabs" role="tablist" aria-label="机会推荐">
@@ -218,8 +290,22 @@ function findPartners() {
                 "
               >
                 <option value="">城市</option>
-                <option v-for="option in cityQuery.data.value ?? []" :key="option.code" :value="option.code">{{ option.name }}</option>
-                <option v-if="city && !(cityQuery.data.value ?? []).some(c=>c.code===city)" :value="city">{{ city }}</option>
+                <option
+                  v-for="option in cityQuery.data.value ?? []"
+                  :key="option.code"
+                  :value="option.code"
+                >
+                  {{ option.name }}
+                </option>
+                <option
+                  v-if="
+                    city &&
+                    !(cityQuery.data.value ?? []).some((c) => c.code === city)
+                  "
+                  :value="city"
+                >
+                  {{ city }}
+                </option>
                 <option value="">不限城市</option>
               </select>
               <ChevronDown :size="13" />
@@ -256,7 +342,22 @@ function findPartners() {
               </select>
               <ChevronDown :size="13" />
             </label>
-            <label v-if="budget && isLive" class="home-select"><span class="sr-only">预算计价单位</span><select :value="unit" aria-label="预算计价单位" @change="filter('unit',($event.target as HTMLSelectElement).value)"><option value="project">每项目</option><option value="hour">每小时</option><option value="day">每天</option><option value="time">每次</option><option value="item">每件</option></select></label>
+            <label v-if="budget && isLive" class="home-select"
+              ><span class="sr-only">预算计价单位</span
+              ><select
+                :value="unit"
+                aria-label="预算计价单位"
+                @change="
+                  filter('unit', ($event.target as HTMLSelectElement).value)
+                "
+              >
+                <option value="project">每项目</option>
+                <option value="hour">每小时</option>
+                <option value="day">每天</option>
+                <option value="time">每次</option>
+                <option value="item">每件</option>
+              </select></label
+            >
             <div class="home-view-toggle">
               <button
                 aria-label="卡片视图"
@@ -281,8 +382,26 @@ function findPartners() {
           </div>
         </div>
         <div class="discovery-result-count" aria-live="polite">
-          <span>{{ q.isPending.value ? '正在查找任务…' : q.error.value ? '任务加载失败' : `共找到 ${q.data.value?.total ?? 0} 个任务` }}</span>
-          <button v-if="category || city || mode || budget || route.query.q || tab !== 'recommended'" @click="router.push('/')">清除筛选</button>
+          <span>{{
+            q.isPending.value
+              ? "正在查找任务…"
+              : q.error.value
+                ? "任务加载失败"
+                : `共找到 ${q.data.value?.total ?? 0} 个任务`
+          }}</span>
+          <button
+            v-if="
+              category ||
+              city ||
+              mode ||
+              budget ||
+              route.query.q ||
+              tab !== 'recommended'
+            "
+            @click="router.push('/')"
+          >
+            清除筛选
+          </button>
         </div>
         <el-skeleton v-if="q.isPending.value" :rows="9" animated />
         <el-result
@@ -314,13 +433,31 @@ function findPartners() {
             @favorite="favorite"
           />
         </div>
-        <button class="discovery-more" @click="router.push({ path: '/opportunities', query: { ...route.query, preview:undefined, page:undefined, sort: tab === 'latest' ? 'latest' : undefined, newcomer: tab === 'newcomer' ? '1' : undefined } })">查看更多任务<ArrowRight :size="17" /></button>
+        <button
+          class="discovery-more"
+          @click="
+            router.push({
+              path: '/opportunities',
+              query: {
+                ...route.query,
+                preview: undefined,
+                page: undefined,
+                sort: tab === 'latest' ? 'latest' : undefined,
+                newcomer: tab === 'newcomer' ? '1' : undefined,
+              },
+            })
+          "
+        >
+          查看更多任务<ArrowRight :size="17" />
+        </button>
       </section>
       <aside class="home-right-rail">
         <section class="demand-invitation">
           <h2>有件事，需要人来做？</h2>
           <p>把需要说清楚，找到合适的人。</p>
-          <button @click="findPartners"><span aria-hidden="true">＋</span>发布需求</button>
+          <button @click="findPartners">
+            <span aria-hidden="true">＋</span>发布需求
+          </button>
         </section>
         <TaskAssistant :viewed="viewed" @open="open" />
       </aside>

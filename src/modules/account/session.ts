@@ -1,5 +1,5 @@
 import { isLive } from "../../services/publicTasks";
-import { ElMessage } from "element-plus";
+import { account } from "../../services/taskInteractions";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { DemoUser } from "../../domain/models";
@@ -17,7 +17,6 @@ export const useSession = defineStore("demo-session", () => {
     /* no session */
   }
   function requireLogin(action: () => void) {
-    if(isLive) { ElMessage.info("本批已开放任务浏览；登录后的收藏、意向和发布功能将在后续接入"); return; }
     if (user.value) action();
     else {
       continuation = action;
@@ -25,6 +24,7 @@ export const useSession = defineStore("demo-session", () => {
     }
   }
   function login(publisher = false) {
+    if (isLive) return;
     user.value = publisher
       ? { id: "publisher-demo", name: "林间工作室" }
       : { id: "visitor-demo", name: "小林" };
@@ -37,9 +37,36 @@ export const useSession = defineStore("demo-session", () => {
     loginOpen.value = false;
     continuation = null;
   }
-  function logout() {
+  async function logout() {
+    if (isLive) await account.logout();
     user.value = null;
     sessionStorage.removeItem("freeligo.demo-user");
   }
-  return { user, loginOpen, requireLogin, login, cancel, logout };
+  async function restore() {
+    if (!isLive) return;
+    try {
+      const v = await account.me();
+      user.value = { id: v.userNo, name: v.nickname };
+    } catch {
+      user.value = null;
+    }
+  }
+  async function signIn(phone: string, code: string) {
+    const v = await account.login(phone, code);
+    user.value = { id: v.userNo, name: v.nickname };
+    loginOpen.value = false;
+    const action = continuation;
+    continuation = null;
+    action?.();
+  }
+  return {
+    user,
+    loginOpen,
+    requireLogin,
+    login,
+    cancel,
+    logout,
+    restore,
+    signIn,
+  };
 });

@@ -1,0 +1,17 @@
+{
+  "browser": "Playwright Chromium",
+  "reason": "Browser plugin not available",
+  "checks": [
+    "software scope expansion",
+    "acceptance collapsed",
+    "real login UI with fixture HTTP responses",
+    "acknowledgment required",
+    "submit status",
+    "favorite",
+    "withdraw",
+    "noncash rewards without currency",
+    "mobile no overflow",
+    "drawer to independent detail"
+  ],
+  "pageErrors": []
+}

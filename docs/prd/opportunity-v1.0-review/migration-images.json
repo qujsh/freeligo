@@ -1,0 +1,37 @@
+[
+  {
+    "file": "06-core-flow.png",
+    "caption": "核心业务流程：发现、预览、详情与真实意向",
+    "width": "720"
+  },
+  {
+    "file": "01-discovery-annotated.png",
+    "caption": "图 01｜发现页功能区域标注",
+    "width": "720"
+  },
+  {
+    "file": "02-card-annotated.png",
+    "caption": "图 02｜有图与无图卡片局部标注",
+    "width": "720"
+  },
+  {
+    "file": "03-preview-structure.png",
+    "caption": "图 03｜预览信息取舍示意（非视觉定稿）",
+    "width": "720"
+  },
+  {
+    "file": "04-detail-annotated.png",
+    "caption": "图 04｜简洁详情页区域标注",
+    "width": "720"
+  },
+  {
+    "file": "05-interest-annotated.png",
+    "caption": "图 05｜意向弹窗原型及字段取舍",
+    "width": "720"
+  },
+  {
+    "file": "07-interest-flow.png",
+    "caption": "图 B｜承接意向业务流程",
+    "width": "720"
+  }
+]

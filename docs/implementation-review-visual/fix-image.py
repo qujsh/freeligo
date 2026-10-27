@@ -1,0 +1,3 @@
+exec(open('publish.py').read().split('log=json.loads')[0])
+z=call(['+fetch','--doc',doc,'--scope','section','--start-block-id',ids['2.3 AI 拆解与工作项编辑'],'--detail','with-ids']);tree=ET.fromstring(z['data']['document']['content']);old=next(tree.iter('img')).attrib['id'];anchor=next(x for x in tree.iter('p') if '图 08｜' in ''.join(x.itertext())).attrib['id']
+z=call(['+media-insert','--doc',doc,'--file','images/feature-3.png','--width','800','--caption','图 08｜AI 拆解与工作项编辑']);new=z['data']['block_id'];call(['+update','--doc',doc,'--command','block_move_after','--block-id',anchor,'--src-block-ids',new]);call(['+update','--doc',doc,'--command','block_delete','--block-id',old]);print('Corrected image inserted and old preview image removed')

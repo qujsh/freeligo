@@ -11,8 +11,14 @@ import {
   ArrowUpRight,
 } from "lucide-vue-next";
 import { ElMessage } from "element-plus";
+import { interactions } from "../../services/taskInteractions";
 import { service } from "../../services";
-import { browse, categories as loadCategories, cities, isLive } from "../../services/publicTasks";
+import {
+  browse,
+  categories as loadCategories,
+  cities,
+  isLive,
+} from "../../services/publicTasks";
 import { useSession } from "../account/session";
 import OpportunityCard from "../../shared/ui/OpportunityCard.vue";
 import PreviewDrawer from "../tasks/PreviewDrawer.vue";
@@ -25,9 +31,18 @@ const route = useRoute(),
   page = ref(1);
 const home = computed(() => route.path === "/"),
   favorites = computed(() => route.path === "/favorites"),
-  categoryQuery = useQuery({queryKey:['public-categories'],queryFn:({signal})=>loadCategories(signal)});
-const cityQuery=useQuery({queryKey:['public-cities'],queryFn:({signal})=>cities(signal)});
-const categories=computed(()=>[{code:'',name:'全部机会'},...(categoryQuery.data.value ?? [])]);
+  categoryQuery = useQuery({
+    queryKey: ["public-categories"],
+    queryFn: ({ signal }) => loadCategories(signal),
+  });
+const cityQuery = useQuery({
+  queryKey: ["public-cities"],
+  queryFn: ({ signal }) => cities(signal),
+});
+const categories = computed(() => [
+  { code: "", name: "全部机会" },
+  ...(categoryQuery.data.value ?? []),
+]);
 const category = computed(() => String(route.query.category ?? "")),
   mode = computed(() => String(route.query.mode ?? "")),
   kind = computed(() => String(route.query.kind ?? "")),
@@ -36,7 +51,10 @@ const q = useQuery({
   queryKey: computed(() => [
     "opportunities",
     route.query.q,
-    route.query.city, route.query.budget, route.query.unit, route.query.sort,
+    route.query.city,
+    route.query.budget,
+    route.query.unit,
+    route.query.sort,
     page.value,
     category.value,
     mode.value,
@@ -45,21 +63,81 @@ const q = useQuery({
     favorites.value,
     session.user?.id,
   ]),
-  queryFn: async ({signal}) => {
-    if(isLive && !favorites.value) return browse({kind:kind.value,keyword:String(route.query.q ?? ''),category:category.value,mode:mode.value,newcomer:newcomer.value,city:String(route.query.city ?? ''),budget:String(route.query.budget ?? ''),unit:String(route.query.unit ?? 'project'),sort:String(route.query.sort ?? (route.query.tab==='latest'?'latest':'recommended')),page:page.value,pageSize:8},signal);
-    const name=categories.value.find(c=>c.code===category.value)?.name;
-    const items=await service.list({keyword:String(route.query.q ?? ''),category:name==='技术与数据'?'商业支持':category.value?name:undefined,mode:mode.value,kind:kind.value,newcomer:newcomer.value,favorites:favorites.value},session.user);
-    return {items:items.slice((page.value-1)*8,page.value*8),total:items.length,page:page.value,pageSize:8};
+  queryFn: async ({ signal }) => {
+    if (isLive && favorites.value) {
+      if (!session.user) return { items: [], total: 0, page: 1, pageSize: 8 };
+      const ids = await interactions.favorites();
+      const items = await Promise.all(
+        ids.map((id) => service.detail(id).catch(() => null)),
+      );
+      const visible = items.filter(
+        (i): i is NonNullable<typeof i> => i !== null,
+      );
+      return {
+        items: visible.slice((page.value - 1) * 8, page.value * 8),
+        total: visible.length,
+        page: page.value,
+        pageSize: 8,
+      };
+    }
+    if (isLive && !favorites.value)
+      return browse(
+        {
+          kind: kind.value,
+          keyword: String(route.query.q ?? ""),
+          category: category.value,
+          mode: mode.value,
+          newcomer: newcomer.value,
+          city: String(route.query.city ?? ""),
+          budget: String(route.query.budget ?? ""),
+          unit: String(route.query.unit ?? "project"),
+          sort: String(
+            route.query.sort ??
+              (route.query.tab === "latest" ? "latest" : "recommended"),
+          ),
+          page: page.value,
+          pageSize: 8,
+        },
+        signal,
+      );
+    const name = categories.value.find((c) => c.code === category.value)?.name;
+    const items = await service.list(
+      {
+        keyword: String(route.query.q ?? ""),
+        category:
+          name === "技术与数据"
+            ? "商业支持"
+            : category.value
+              ? name
+              : undefined,
+        mode: mode.value,
+        kind: kind.value,
+        newcomer: newcomer.value,
+        favorites: favorites.value,
+      },
+      session.user,
+    );
+    return {
+      items: items.slice((page.value - 1) * 8, page.value * 8),
+      total: items.length,
+      page: page.value,
+      pageSize: 8,
+    };
   },
 });
-const favoriteIds = ref<string[]>([]);
-watch(
-  [() => session.user, q.data],
-  () => {
-    favoriteIds.value = session.user ? service.favorites(session.user) : [];
-  },
-  { immediate: true },
+const favoriteQuery = useQuery({
+  queryKey: computed(() => ["favorite-ids", session.user?.id]),
+  enabled: computed(() => isLive && !!session.user),
+  queryFn: () => interactions.favorites(),
+});
+const favoriteIds = computed(() =>
+  isLive
+    ? (favoriteQuery.data.value ?? [])
+    : session.user
+      ? service.favorites(session.user)
+      : [],
 );
+
 watch(
   () => route.query,
   () => {
@@ -83,8 +161,11 @@ function open(id: string) {
 function favorite(id: string) {
   session.requireLogin(async () => {
     try {
-      await service.favorite(id, session.user!);
-      favoriteIds.value = service.favorites(session.user!);
+      if (isLive)
+        await interactions.favorite(id, !favoriteIds.value.includes(id));
+      else await service.favorite(id, session.user!);
+      await client.invalidateQueries({ queryKey: ["favorite-ids"] });
+      await client.invalidateQueries({ queryKey: ["task-state"] });
       await client.invalidateQueries({ queryKey: ["opportunities"] });
     } catch (e) {
       ElMessage.error((e as Error).message);
@@ -205,10 +286,54 @@ function favorite(id: string) {
             <el-option value="project" label="协作项目" />
             <el-option value="task" label="具体任务" />
           </el-select>
-          <el-select v-if="isLive" :model-value="String(route.query.city ?? '')" placeholder="城市" clearable aria-label="城市" @change="(v:string)=>filter('city',v)"><el-option v-for="option in cityQuery.data.value ?? []" :key="option.code" :value="option.code" :label="option.name" /></el-select>
-          <el-select v-if="isLive" :model-value="String(route.query.sort ?? '')" placeholder="默认发现" clearable aria-label="排序" @change="(v:string)=>filter('sort',v)"><el-option value="recommended" label="默认发现" /><el-option value="latest" label="最新发布" /></el-select>
-          <el-select v-if="isLive" :model-value="String(route.query.budget ?? '')" placeholder="预算" clearable aria-label="预算" @change="(v:string)=>filter('budget',v)"><el-option value="under1000" label="1,000以下" /><el-option value="1000to3000" label="1,000–3,000" /><el-option value="over3000" label="3,000以上" /></el-select>
-          <el-select v-if="isLive && route.query.budget" :model-value="String(route.query.unit ?? 'project')" aria-label="预算计价单位" @change="(v:string)=>filter('unit',v)"><el-option value="project" label="每项目" /><el-option value="hour" label="每小时" /><el-option value="day" label="每天" /><el-option value="time" label="每次" /><el-option value="item" label="每件" /></el-select>
+          <el-select
+            v-if="isLive"
+            :model-value="String(route.query.city ?? '')"
+            placeholder="城市"
+            clearable
+            aria-label="城市"
+            @change="(v: string) => filter('city', v)"
+            ><el-option
+              v-for="option in cityQuery.data.value ?? []"
+              :key="option.code"
+              :value="option.code"
+              :label="option.name"
+          /></el-select>
+          <el-select
+            v-if="isLive"
+            :model-value="String(route.query.sort ?? '')"
+            placeholder="默认发现"
+            clearable
+            aria-label="排序"
+            @change="(v: string) => filter('sort', v)"
+            ><el-option value="recommended" label="默认发现" /><el-option
+              value="latest"
+              label="最新发布"
+          /></el-select>
+          <el-select
+            v-if="isLive"
+            :model-value="String(route.query.budget ?? '')"
+            placeholder="预算"
+            clearable
+            aria-label="预算"
+            @change="(v: string) => filter('budget', v)"
+            ><el-option value="under1000" label="1,000以下" /><el-option
+              value="1000to3000"
+              label="1,000–3,000" /><el-option
+              value="over3000"
+              label="3,000以上"
+          /></el-select>
+          <el-select
+            v-if="isLive && route.query.budget"
+            :model-value="String(route.query.unit ?? 'project')"
+            aria-label="预算计价单位"
+            @change="(v: string) => filter('unit', v)"
+            ><el-option value="project" label="每项目" /><el-option
+              value="hour"
+              label="每小时" /><el-option value="day" label="每天" /><el-option
+              value="time"
+              label="每次" /><el-option value="item" label="每件"
+          /></el-select>
           <el-checkbox
             :model-value="newcomer"
             @change="

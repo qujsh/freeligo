@@ -28,7 +28,28 @@ const projectSchema = z.object({
   summary: z.string(),
   tasks: z.array(projectTaskSchema),
 });
+export const rewardItemSchema = z.object({
+  type: z.enum(["cash", "goods", "service"]),
+  title: z.string(),
+  pricing: z.string().nullable(),
+  amountMin: z.number().nullable(),
+  amountMax: z.number().nullable(),
+  unit: z.string().nullable(),
+  quantity: z.number().nullable(),
+  condition: z.string().nullable(),
+  description: z.string().nullable(),
+  handover: z.string().nullable(),
+});
 const contentSchema = z.object({
+  details: z
+    .object({
+      goal: z.string(),
+      collaboration: z.string().nullable(),
+      scopeConfirmed: z.boolean(),
+      rewards: z.array(rewardItemSchema),
+    })
+    .nullable()
+    .optional(),
   project: projectSchema.nullable().optional(),
   title: z.string(),
   summary: z.string(),
@@ -37,7 +58,16 @@ const contentSchema = z.object({
   cityCode: z.string().nullable(),
   cityName: z.string().nullable(),
   workMode: z.enum(["remote", "onsite", "hybrid"]),
-  rewardType: z.enum(["fixed", "range", "negotiable", "non_cash"]),
+  rewardType: z.enum([
+    "fixed",
+    "range",
+    "negotiable",
+    "non_cash",
+    "cash",
+    "goods",
+    "service",
+    "mixed",
+  ]),
   amountMin: z.number().nullable(),
   amountMax: z.number().nullable(),
   currency: z.literal("CNY"),
@@ -56,13 +86,18 @@ const contentSchema = z.object({
 });
 const mediaSchema = z.object({
   mediaNo: z.string(),
-  type: z.enum(["image", "video"]),
+  type: z.enum(["image", "video", "file"]),
+  originalName: z.string().nullable().optional(),
+  available: z.boolean().optional(),
   contentType: z.string(),
   size: z.number(),
   durationSeconds: z.number().nullable(),
   url: z.string(),
 });
 const taskSchema = z.object({
+  version: z.number().optional(),
+  recruitmentStatus: z.string().optional(),
+  acceptedCount: z.number().optional(),
   taskNo: z.string(),
   projectNo: z.string().optional(),
   experience: z.string().nullable().optional(),
@@ -184,8 +219,16 @@ function adapt(
       c.effort === null
         ? ""
         : `${c.effort}${unitNames[c.effortUnit || ""] || ""}`,
-    reward,
-    unit: monetary ? unitNames[c.unit] || c.unit : "",
+    reward: c.details?.rewards.length
+      ? c.details.rewards
+          .map((r) =>
+            r.type === "cash"
+              ? `¥${amount(r.amountMin)}${r.pricing === "range" ? `–${amount(r.amountMax)}` : ""}`
+              : r.title,
+          )
+          .join(" + ")
+      : reward,
+    unit: c.details ? "" : monetary ? unitNames[c.unit] || c.unit : "",
     skills: c.skills,
     tags: c.skills,
     publisher: task.publisher.nickname,
@@ -195,13 +238,20 @@ function adapt(
     videoDuration: video?.durationSeconds ?? undefined,
     newcomer: c.newcomer,
     capacity: task.recruitCount,
-    status: "open",
+    status:
+      !task.recruitmentStatus || task.recruitmentStatus === "open"
+        ? "open"
+        : "closed",
+    version: task.version,
+    recruitmentStatus: task.recruitmentStatus,
+    acceptedCount: task.acceptedCount,
+    details: c.details ?? undefined,
     scope: c.scope,
     deliverables: c.deliverables,
     acceptance: c.acceptance,
     createdAt: task.publishedAt,
     source: "api",
-    rewardPrefix: monetary ? "¥" : "",
+    rewardPrefix: c.details ? "" : monetary ? "¥" : "",
     budgetText: c.budgetText || undefined,
     startDate: c.startDate || undefined,
     deadline: c.deadline || undefined,
@@ -278,14 +328,20 @@ export async function browse(
     ),
   };
 }
-export async function publicDetail(no: string, signal?: AbortSignal) {
+export async function publicDetail(
+  no: string,
+  signal?: AbortSignal,
+  confirmed = false,
+) {
   if (!isLive) return mockService.detail(no);
   const project = no.startsWith("PROJECT-");
   return adapt(
     await requestPublic(
-      project
-        ? `/api/v1/public/projects/detail?projectNo=${encodeURIComponent(no)}`
-        : `/api/v1/public/tasks/detail?taskNo=${encodeURIComponent(no)}`,
+      confirmed
+        ? `/api/v1/task-interactions/confirmed-detail?taskNo=${encodeURIComponent(no.replace(/^PROJECT-/, "TASK-"))}`
+        : project
+          ? `/api/v1/public/projects/detail?projectNo=${encodeURIComponent(no)}`
+          : `/api/v1/public/tasks/detail?taskNo=${encodeURIComponent(no)}`,
       taskSchema,
       signal,
     ),

@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "identity": "user",
+  "data": {
+    "document": {
+      "content": "<fragment mode=\"keyword\" keyword=\"11 数据表结构设计|图 E｜数据表依赖关系\"><h1 id=\"doxcnPI7cjquyra8HgiKlGi3Edg\">11 数据表结构设计</h1><p id=\"doxcnvdFTjy07ol0NySMrqJ0Xfh\"><b>图 E｜数据表依赖关系</b></p></fragment>",
+      "document_id": "IAIPdxr4WotGh0xV5XRc2ZECncb",
+      "revision_id": 115
+    }
+  },
+  "_notice": {
+    "update": {
+      "command": "lark-cli update",
+      "current": "1.0.69",
+      "latest": "1.0.98",
+      "message": "lark-cli 1.0.98 available, current 1.0.69, run: lark-cli update"
+    }
+  }
+}

@@ -1,3 +1,21 @@
+export interface RewardItem {
+  type: "cash" | "goods" | "service";
+  title: string;
+  pricing: string | null;
+  amountMin: number | null;
+  amountMax: number | null;
+  unit: string | null;
+  quantity: number | null;
+  condition: string | null;
+  description: string | null;
+  handover: string | null;
+}
+export interface TaskDetail {
+  goal: string;
+  collaboration: string | null;
+  scopeConfirmed: boolean;
+  rewards: RewardItem[];
+}
 export interface ProjectTask {
   id: string;
   type: "module" | "feature" | "work" | "subtask";
@@ -15,6 +33,10 @@ export interface PublicProject {
 }
 export type OpportunityKind = "project" | "task";
 export interface Opportunity {
+  details?: TaskDetail;
+  version?: number;
+  recruitmentStatus?: string;
+  acceptedCount?: number;
   source?: "api";
   project?: PublicProject;
   publicationTaskId?: string;
@@ -27,7 +49,9 @@ export interface Opportunity {
   deadline?: string;
   media?: {
     mediaNo: string;
-    type: "image" | "video";
+    type: "image" | "video" | "file";
+    originalName?: string | null;
+    available?: boolean;
     url: string;
     durationSeconds: number | null;
   }[];

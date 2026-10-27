@@ -1,0 +1,9 @@
+<p>信息优先级：任务是什么 → 回报是什么 → 地点与时间 → 分类/技能；封面是辅助，不代替任务信息。</p><p><b>图 02｜有图与无图卡片局部标注</b></p><p>① 封面；② 标题；③ 简介与标签；④ 回报及工作信息；⑤ 收藏。原图无图卡片采用纯文本；本期按正式草案改为统一简洁占位，不虚构照片。</p><h2>04.1 字段与显示</h2><table><colgroup><col width="110"/><col width="180"/><col width="270"/></colgroup><thead><tr><th background-color="light-gray">字段</th><th background-color="light-gray">必填性</th><th background-color="light-gray">显示规则</th></tr></thead><tbody><tr><td>标题、简介</td><td>必填</td><td>各最多两行，超出省略；预览与详情提供完整内容。</td></tr><tr><td>封面</td><td>可选</td><td>真实图片或视频封面；无封面使用统一简洁占位。</td></tr><tr><td>一级分类、技能</td><td>分类必填</td><td>分类标签保留；技能最多2个，不用工作方式挤占技能数量。</td></tr><tr><td>回报类型、摘要</td><td>必填</td><td>四类之一；长摘要可简写，但完整条件必须能在预览/详情获取。</td></tr><tr><td>方式、城市</td><td>条件必填</td><td>远程/现场/混合；现场、混合必须有城市。</td></tr><tr><td>时间要求</td><td>可选</td><td>预计投入、截止时间或时间可协商；不混淆发布时间与工作量。</td></tr><tr><td>收藏状态</td><td>登录操作</td><td>收藏按钮与卡片主体独立；未登录先登录，不显示假成功。</td></tr></tbody></table><h2>04.2 四种回报并排对照</h2><table><colgroup><col width="140"/><col width="420"/></colgroup><thead><tr><th background-color="light-gray">现金回报</th><th background-color="light-gray">物品交换</th></tr></thead><tbody><tr><td>任务：为科技体验活动设计海报
+摘要：¥800–1,500／项目
+工作：主视觉及2张宣传图</td><td>任务：为独立书店拍摄空间照片
+摘要：交换：二手数码相机
+工作：拍摄并交付约20张修图照片</td></tr></tbody></table><table><colgroup><col width="140"/><col width="420"/></colgroup><thead><tr><th background-color="light-gray">服务交换</th><th background-color="light-gray">组合回报</th></tr></thead><tbody><tr><td>任务：帮小店制作预约工具
+摘要：交换：品牌设计服务
+工作：预约、时间选择与记录查询</td><td>任务：协助周末手作活动执行
+摘要：¥300 + 手作课程
+工作：布场、签到与现场引导</td></tr></tbody></table><p>以上均为字段示例，不是实际发布任务。没有现金的“物品+服务”组合不得显示人民币符号。</p><p><b>点击：</b>桌面点击主体打开预览，收藏只切换收藏；移动端主体直接进入详情。视频封面能否直接播放见 Q12，不能自行增加与打开预览冲突的点击行为。</p><p><b>关闭任务：</b>卡片如仍在页面中应显示“已结束”；不能继续新提交意向。是否保留在发现列表见 Q08。</p>

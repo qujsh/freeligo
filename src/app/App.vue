@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { useQueryClient } from "@tanstack/vue-query";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
-import { Search, ChevronDown, RotateCcw, ArrowRight, ArrowUpRight } from "lucide-vue-next";
-import { ref } from "vue";
+import {
+  Search,
+  ChevronDown,
+  RotateCcw,
+  ArrowRight,
+  ArrowUpRight,
+} from "lucide-vue-next";
+import { ref, onMounted } from "vue";
+import LoginForm from "../modules/account/LoginForm.vue";
 import UnionLogo from "../shared/ui/UnionLogo.vue";
 import { useSession } from "../modules/account/session";
 import { service } from "../services";
@@ -13,6 +20,7 @@ const growthOpen = ref(false);
 const session = useSession(),
   client = useQueryClient(),
   router = useRouter();
+onMounted(() => session.restore());
 async function reset() {
   try {
     await ElMessageBox.confirm(
@@ -26,8 +34,8 @@ async function reset() {
     /* cancelled */
   }
 }
-function signout() {
-  session.logout();
+async function signout() {
+  await session.logout();
   client.clear();
 }
 function publish() {
@@ -57,7 +65,11 @@ function publish() {
         </router-link>
         <router-link
           to="/opportunities?kind=project"
-          :class="{ active: $route.query.kind === 'project' || $route.path.startsWith('/projects/') }"
+          :class="{
+            active:
+              $route.query.kind === 'project' ||
+              $route.path.startsWith('/projects/'),
+          }"
         >
           一起做
         </router-link>
@@ -101,7 +113,7 @@ function publish() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="/my-interests">
-                  我的意向 · 暂未开放
+                  我的意向
                 </el-dropdown-item>
                 <el-dropdown-item command="/favorites">
                   我的收藏
@@ -110,7 +122,7 @@ function publish() {
                   发布者工作台
                 </el-dropdown-item>
                 <el-dropdown-item v-if="session.user" command="logout" divided>
-                  退出演示账号
+                  退出账号
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -124,7 +136,13 @@ function publish() {
     <router-view />
     <footer class="site-footer">
       <router-link class="brand" to="/">自由人联合体</router-link>
-      <p>{{ isLive ? "公开任务来自共享后端 · 收藏、意向和 C 端发布尚未接入" : "交互原型 · 机会、人物、收藏与发布操作均为本机演示数据" }}</p>
+      <p>
+        {{
+          isLive
+            ? "任务、收藏与意向连接共享后端 · 平台不提供交易担保"
+            : "交互原型 · 机会、人物、收藏与发布操作均为本机演示数据"
+        }}
+      </p>
       <el-button v-if="!isLive" link @click="reset">
         <RotateCcw :size="12" />
         重置演示
@@ -154,39 +172,43 @@ function publish() {
     </el-dialog>
     <el-dialog
       :model-value="session.loginOpen"
-      title="以演示身份继续"
+      :title="isLive ? '登录并继续' : '以演示身份继续'"
       width="min(420px, 92vw)"
       @close="session.cancel"
     >
-      <p class="muted">原型不收集手机号，也不会进行真实登录。</p>
-      <button
-        class="demo-identity"
-        @click="
-          session.login();
-          client.invalidateQueries();
-        "
-      >
-        <span class="avatar">林</span>
-        <span>
-          <strong>我是参与者</strong>
-          <small>收藏机会、表达承接意向、发布新需求</small>
-        </span>
-        <ArrowUpRight :size="18" />
-      </button>
-      <button
-        class="demo-identity"
-        @click="
-          session.login(true);
-          client.invalidateQueries();
-        "
-      >
-        <span class="avatar">间</span>
-        <span>
-          <strong>我是项目发布者</strong>
-          <small>查看样例申请、选择承接人</small>
-        </span>
-        <ArrowUpRight :size="18" />
-      </button>
+      <LoginForm v-if="isLive" @logged-in="client.invalidateQueries()" />
+      <template v-else
+        >
+<p class="muted">原型不收集手机号，也不会进行真实登录。</p>
+        <button
+          class="demo-identity"
+          @click="
+            session.login();
+            client.invalidateQueries();
+          "
+        >
+          <span class="avatar">林</span>
+          <span>
+            <strong>我是参与者</strong>
+            <small>收藏机会、表达承接意向、发布新需求</small>
+          </span>
+          <ArrowUpRight :size="18" />
+        </button>
+        <button
+          class="demo-identity"
+          @click="
+            session.login(true);
+            client.invalidateQueries();
+          "
+        >
+          <span class="avatar">间</span>
+          <span>
+            <strong>我是项目发布者</strong>
+            <small>查看样例申请、选择承接人</small>
+          </span>
+          <ArrowUpRight :size="18" />
+        </button>
+      </template>
     </el-dialog>
   </el-config-provider>
 </template>

@@ -7,6 +7,19 @@ export default ts.config(
   ...ts.configs.recommended,
   ...vue.configs["flat/recommended"],
   {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        __dirname: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+      },
+    },
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
     files: ["**/*.vue"],
     languageOptions: { parserOptions: { parser: ts.parser } },
     rules: {

@@ -1,0 +1,239 @@
+{
+  "taskNo": "TASK-REVIEW",
+  "projectNo": "PROJECT-REVIEW",
+  "categoryName": "技术与数据",
+  "content": {
+    "title": "为移动社交 APP 增加社区功能",
+    "summary": "实现图文发布、社区互动和内容安全管理，让用户可以围绕真实内容交流。",
+    "categoryCode": "technology_data",
+    "skills": [
+      "Vue 3",
+      "Java",
+      "社区功能"
+    ],
+    "cityCode": null,
+    "cityName": null,
+    "workMode": "remote",
+    "rewardType": "cash",
+    "amountMin": 8000,
+    "amountMax": 12000,
+    "currency": "CNY",
+    "unit": "project",
+    "budgetText": null,
+    "effort": 20,
+    "effortUnit": "day",
+    "newcomer": false,
+    "scope": [],
+    "deliverables": [
+      "可运行的前后端源码及数据库迁移脚本",
+      "部署说明、接口说明与关键业务验收记录"
+    ],
+    "acceptance": [
+      "用户仅能修改、删除自己的帖子和评论",
+      "审核处置和禁言封禁可正常生效",
+      "图片压缩、缩略图和大图预览可正常使用"
+    ],
+    "startDate": "2026-11-01",
+    "deadline": "2026-11-30",
+    "mediaNos": [],
+    "coverMediaNo": null,
+    "project": {
+      "title": "移动社交 APP 社区模块",
+      "summary": "在现有 APP 中增加社区内容及互动。",
+      "tasks": [
+        {
+          "id": "m0",
+          "type": "module",
+          "name": "图文帖发布与图片处理",
+          "description": "实现这一组已确认的工作内容。",
+          "role": null,
+          "startDate": null,
+          "endDate": null,
+          "children": [
+            {
+              "id": "f0",
+              "type": "feature",
+              "name": "图文帖发布与维护",
+              "description": "实现这一组已确认的工作内容。",
+              "role": null,
+              "startDate": null,
+              "endDate": null,
+              "children": [
+                {
+                  "id": "w0",
+                  "type": "work",
+                  "name": "图文帖发布与编辑删除",
+                  "description": "支持编辑和删除自己的内容，校验权限并反馈操作结果。",
+                  "role": null,
+                  "startDate": null,
+                  "endDate": null,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m1",
+          "type": "module",
+          "name": "社区互动能力",
+          "description": "实现这一组已确认的工作内容。",
+          "role": null,
+          "startDate": null,
+          "endDate": null,
+          "children": [
+            {
+              "id": "f1",
+              "type": "feature",
+              "name": "点赞与评论",
+              "description": "实现这一组已确认的工作内容。",
+              "role": null,
+              "startDate": null,
+              "endDate": null,
+              "children": [
+                {
+                  "id": "w1",
+                  "type": "work",
+                  "name": "点赞与取消点赞及计数展示",
+                  "description": "支持编辑和删除自己的内容，校验权限并反馈操作结果。",
+                  "role": null,
+                  "startDate": null,
+                  "endDate": null,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m2",
+          "type": "module",
+          "name": "内容安全管理",
+          "description": "实现这一组已确认的工作内容。",
+          "role": null,
+          "startDate": null,
+          "endDate": null,
+          "children": [
+            {
+              "id": "f2",
+              "type": "feature",
+              "name": "内容审核",
+              "description": "实现这一组已确认的工作内容。",
+              "role": null,
+              "startDate": null,
+              "endDate": null,
+              "children": [
+                {
+                  "id": "w2",
+                  "type": "work",
+                  "name": "帖子与评论审核处置",
+                  "description": "支持编辑和删除自己的内容，校验权限并反馈操作结果。",
+                  "role": null,
+                  "startDate": null,
+                  "endDate": null,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m3",
+          "type": "module",
+          "name": "内容组织与发现",
+          "description": "实现这一组已确认的工作内容。",
+          "role": null,
+          "startDate": null,
+          "endDate": null,
+          "children": [
+            {
+              "id": "f3",
+              "type": "feature",
+              "name": "话题与搜索",
+              "description": "实现这一组已确认的工作内容。",
+              "role": null,
+              "startDate": null,
+              "endDate": null,
+              "children": [
+                {
+                  "id": "w3",
+                  "type": "work",
+                  "name": "关键词搜索帖子与话题",
+                  "description": "支持编辑和删除自己的内容，校验权限并反馈操作结果。",
+                  "role": null,
+                  "startDate": null,
+                  "endDate": null,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "m4",
+          "type": "module",
+          "name": "互动通知",
+          "description": "实现这一组已确认的工作内容。",
+          "role": null,
+          "startDate": null,
+          "endDate": null,
+          "children": [
+            {
+              "id": "f4",
+              "type": "feature",
+              "name": "互动通知",
+              "description": "实现这一组已确认的工作内容。",
+              "role": null,
+              "startDate": null,
+              "endDate": null,
+              "children": [
+                {
+                  "id": "w4",
+                  "type": "work",
+                  "name": "点赞评论回复通知触达",
+                  "description": "支持编辑和删除自己的内容，校验权限并反馈操作结果。",
+                  "role": null,
+                  "startDate": null,
+                  "endDate": null,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "details": {
+      "goal": "让用户能够发布图文帖并交流，同时让管理员可以处理违规内容。",
+      "collaboration": "远程协作，每周一次进度同步；第三方识别服务的账号与费用需要提前确认。",
+      "scopeConfirmed": true,
+      "rewards": [
+        {
+          "type": "cash",
+          "title": "社区功能开发报酬",
+          "pricing": "range",
+          "amountMin": 8000,
+          "amountMax": 12000,
+          "unit": "项目",
+          "quantity": null,
+          "condition": null,
+          "description": "按确认的整体工作范围交付，不按单个工作项分别计价。",
+          "handover": "付款安排由双方另行确认。"
+        }
+      ]
+    }
+  },
+  "publishedAt": "2026-10-27T10:00:00",
+  "publisher": {
+    "userNo": "USER-PUBLISHER",
+    "nickname": "陈同学"
+  },
+  "recruitCount": 1,
+  "coverUrl": null,
+  "media": [],
+  "version": 2,
+  "recruitmentStatus": "open",
+  "acceptedCount": 0,
+  "experience": "熟练",
+  "recruitMode": "报名审核"
+}

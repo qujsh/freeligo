@@ -6,6 +6,7 @@ import { ArrowUpRight } from "lucide-vue-next";
 import { service } from "../../services";
 import TaskBody from "./TaskBody.vue";
 import InterestForm from "./InterestForm.vue";
+import { useTaskActions } from "./useTaskActions";
 import { useSession } from "../account/session";
 const props = defineProps<{ id: string }>(),
   emit = defineEmits<{ close: [] }>(),
@@ -18,10 +19,7 @@ const q = useQuery({
   queryFn: () => service.detail(props.id),
   enabled: computed(() => !!props.id),
 });
-const submitted = computed(() => {
-  void revision.value;
-  return !!session.user && service.hasInterest(props.id, session.user);
-});
+const { submitted } = useTaskActions(computed(() => props.id));
 watch(
   () => props.id,
   () => (interest.value = false),
@@ -32,7 +30,10 @@ function participate() {
 function detail() {
   const o = q.data.value;
   if (o) {
-    router.push(`/${o.kind === "project" ? "projects" : "tasks"}/${o.id}`);
+    router.push({
+      path: `/${o.kind === "project" ? "projects" : "tasks"}/${o.id}`,
+      query: { from: router.currentRoute.value.fullPath },
+    });
   }
 }
 </script>
@@ -50,7 +51,11 @@ function detail() {
       v-else-if="q.error.value"
       icon="warning"
       :title="q.error.value.message"
-    />
+    >
+      <template #extra>
+        <el-button @click="q.refetch()">重新加载</el-button>
+      </template>
+    </el-result>
     <TaskBody v-else-if="q.data.value" :item="q.data.value" compact />
     <template #footer>
       <div class="drawer-footer">
