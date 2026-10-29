@@ -156,8 +156,6 @@ describe("public task HTTP contract", () => {
   });
   it("reads project snapshots and real city options through their public endpoints", async () => {
     const project = {
-      title: "项目名称",
-      summary: "项目介绍",
       tasks: [
         {
           id: "public-1",
@@ -207,7 +205,8 @@ describe("public task HTTP contract", () => {
     expect(fetch.mock.calls[0]![0]).toContain("/public/projects/list");
     expect(page.items[0]?.kind).toBe("project");
     expect(page.items[0]?.id).toBe("PROJECT-1");
-    expect(page.items[0]?.title).toBe("项目名称");
+    expect(page.items[0]?.title).toBe(content.title);
+    expect(page.items[0]?.summary).toBe(content.summary);
     const detail = await publicDetail("PROJECT-1");
     expect(detail.project?.tasks[0]?.name).toBe("公开模块");
     expect(detail.publicationTaskId).toBe("TASK-1");
@@ -223,7 +222,6 @@ describe("complete task detail contract", () => {
     const details = {
       goal: "完成社区交付",
       collaboration: "远程同步",
-      scopeConfirmed: true,
       rewards: [
         {
           type: "goods",

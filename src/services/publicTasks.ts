@@ -24,8 +24,6 @@ const projectTaskSchema: z.ZodType<ProjectTask> = z.lazy(() =>
   }),
 );
 const projectSchema = z.object({
-  title: z.string(),
-  summary: z.string(),
   tasks: z.array(projectTaskSchema),
 });
 export const rewardItemSchema = z.object({
@@ -45,7 +43,6 @@ const contentSchema = z.object({
     .object({
       goal: z.string(),
       collaboration: z.string().nullable(),
-      scopeConfirmed: z.boolean(),
       rewards: z.array(rewardItemSchema),
     })
     .nullable()
@@ -208,8 +205,8 @@ function adapt(
     publicationTaskId: task.taskNo,
     experience: task.experience ?? undefined,
     recruitMode: task.recruitMode ?? undefined,
-    title: kind === "project" ? c.project?.title || c.title : c.title,
-    summary: kind === "project" ? (c.project?.summary ?? c.summary) : c.summary,
+    title: c.title,
+    summary: c.summary,
     category: task.categoryName,
     mode: ({ remote: "远程", onsite: "现场", hybrid: "混合" } as const)[
       c.workMode

@@ -108,3 +108,7 @@ npm run dev
 - 后端下次由你手动启动／重启时执行 `V202610261200__task_detail_interactions.sql`。本轮没有操作你的服务或开发数据库。
 
 实施范围、验证证据与限制见 [完整任务详情实施说明](docs/verification/task-detail/implementation.md)。
+
+## 发布标题与简介去重（2026-10-29）
+
+任务与项目详情共用任务标题、任务简介，不再单独设置或展示项目名称、项目介绍。接口 `content.project` 仅保留工作范围 `tasks`；整份拆解、层级展示和确认发布规则不变。此更新替代上述独立项目介绍的旧说明。

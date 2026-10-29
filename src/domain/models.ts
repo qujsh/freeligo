@@ -13,7 +13,6 @@ export interface RewardItem {
 export interface TaskDetail {
   goal: string;
   collaboration: string | null;
-  scopeConfirmed: boolean;
   rewards: RewardItem[];
 }
 export interface ProjectTask {
@@ -27,8 +26,6 @@ export interface ProjectTask {
   children: ProjectTask[];
 }
 export interface PublicProject {
-  title: string;
-  summary: string;
   tasks: ProjectTask[];
 }
 export type OpportunityKind = "project" | "task";

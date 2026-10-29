@@ -5,18 +5,9 @@ import PublicProjectTree from "./PublicProjectTree.vue";
 import RewardContent from "./RewardContent.vue";
 import type { Opportunity } from "../../domain/models";
 const props = defineProps<{ item: Opportunity; compact?: boolean }>();
-const expanded = ref(false);
-watch(
-  () => props.item.id,
-  () => (expanded.value = false),
-);
 const nodes = computed(() => props.item.project?.tasks ?? []);
-const visibleNodes = computed(() =>
-  nodes.value.slice(
-    0,
-    props.compact ? 2 : expanded.value ? nodes.value.length : 3,
-  ),
-);
+const workGroups = computed(() => nodes.value.flatMap(node => node.type === "module" && node.children.length ? node.children : [node]));
+const visibleNodes = computed(() => workGroups.value.slice(0, 2));
 const images = computed(
   () =>
     props.item.media?.filter((m) => m.type === "image").map((m) => m.url) ??
@@ -63,23 +54,13 @@ const states: Record<string, string> = {
     <section v-if="nodes.length || item.scope.length">
       <h2>{{ compact ? "主要工作" : "工作范围" }}</h2>
       <template v-if="nodes.length">
-        <p v-if="!compact" class="scope-note">
-          以下工作整体招募，不单独计价或分配名额。
-        </p>
         <ul v-if="compact" class="preview-work">
           <li v-for="n in visibleNodes" :key="n.id">{{ n.name }}</li>
-          <li v-if="nodes.length > 2">
-            另有 {{ nodes.length - 2 }} 个模块，完整详情中查看
+          <li v-if="workGroups.length > 2">
+            另有 {{ workGroups.length - 2 }} 组工作，完整详情中查看
           </li>
         </ul>
-        <PublicProjectTree v-else :tasks="visibleNodes" /><el-button
-          v-if="!compact && nodes.length > 3"
-          link
-          type="primary"
-          @click="expanded = !expanded"
-        >
-          {{ expanded ? "收起工作范围" : `展开全部 ${nodes.length} 个模块` }}
-        </el-button>
+        <PublicProjectTree v-else :key="item.id" :tasks="nodes" />
       </template>
       <ul v-else>
         <li
@@ -174,17 +155,6 @@ const states: Record<string, string> = {
       <p v-if="item.deadline">交付期限：{{ item.deadline }}</p>
       <p v-if="item.duration">预计投入：{{ item.duration }}</p>
       <p v-if="item.details?.collaboration">{{ item.details.collaboration }}</p>
-    </section>
-    <section
-      v-if="
-        !compact &&
-        item.project?.summary &&
-        item.project.summary !== item.summary
-      "
-    >
-      <h2>项目介绍</h2>
-      <h3>{{ item.project.title }}</h3>
-      <p>{{ item.project.summary }}</p>
     </section>
     <p v-if="compact" class="publisher-line">发布人：{{ item.publisher }}</p>
   </div>
