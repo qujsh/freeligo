@@ -15,12 +15,15 @@ import { useSession } from "../modules/account/session";
 import { service } from "../services";
 import { isLive } from "../services/publicTasks";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 const growthOpen = ref(false);
+const route = useRoute();
 const session = useSession(),
   client = useQueryClient(),
   router = useRouter();
-onMounted(() => session.restore());
+onMounted(() => {
+  if (route.path !== "/") void session.restore();
+});
 async function reset() {
   try {
     await ElMessageBox.confirm(
@@ -44,7 +47,7 @@ function publish() {
 </script>
 <template>
   <el-config-provider :locale="zhCn">
-    <header class="site-header reference-header">
+    <header v-if="route.path !== '/'" class="site-header reference-header">
       <router-link class="brand" to="/" aria-label="自由人联合体首页">
         <UnionLogo />
         <span>
@@ -134,7 +137,7 @@ function publish() {
       </div>
     </header>
     <router-view />
-    <footer class="site-footer">
+    <footer v-if="route.path !== '/'" class="site-footer">
       <router-link class="brand" to="/">自由人联合体</router-link>
       <p>
         {{
@@ -177,9 +180,8 @@ function publish() {
       @close="session.cancel"
     >
       <LoginForm v-if="isLive" @logged-in="client.invalidateQueries()" />
-      <template v-else
-        >
-<p class="muted">原型不收集手机号，也不会进行真实登录。</p>
+      <template v-else>
+        <p class="muted">原型不收集手机号，也不会进行真实登录。</p>
         <button
           class="demo-identity"
           @click="
