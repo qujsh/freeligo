@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAssetUrl } from "../../shared/lib/publicAssetUrl";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -111,7 +112,7 @@ function saveNote() {
           </div>
           <img
             class="notes-hero__image"
-            src="/images/reference/hero-stories.webp"
+            :src="publicAssetUrl('/images/reference/hero-stories.webp')"
             alt="用镜头记录真实的美好，修好一把椅子，做成一件解决难题的小工具"
             fetchpriority="high"
           />
@@ -192,7 +193,7 @@ function saveNote() {
         <h1>每一次动手，都有一点成长。</h1>
         <p>从一个想法，到一件做成的事。回看过程，也看见自己的变化。</p>
         <div class="notes-growth__feature">
-          <img src="/images/notes/repair.webp" alt="修复木椅的过程" />
+          <img :src="publicAssetUrl('/images/notes/repair.webp')" alt="修复木椅的过程" />
           <div>
             <span>生活经验 · 手工修复</span>
             <h2>修好一把椅子，<br />也是在修复生活。</h2>
@@ -223,7 +224,7 @@ function saveNote() {
 <article v-if="selected" class="notes-reader">
         <img
           v-if="selected.image"
-          :src="`/images/notes/${selected.image}.webp`"
+          :src="publicAssetUrl(`/images/notes/${selected.image}.webp`)"
           :alt="selected.title"
         />
         <h1>{{ selected.title }}</h1>

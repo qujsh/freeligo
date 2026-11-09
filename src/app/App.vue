@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAssetUrl } from "../shared/lib/publicAssetUrl";
 import { useQueryClient } from "@tanstack/vue-query";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import {
@@ -108,7 +109,7 @@ function publish() {
                 </span>
                 <img
                   v-else
-                  src="/images/reference/avatar.webp"
+                  :src="publicAssetUrl('/images/reference/avatar.webp')"
                   alt="演示头像"
                 />
               </span>
@@ -158,10 +159,10 @@ function publish() {
       width="min(660px, 92vw)"
     >
       <div class="growth-comparison">
-        <img src="/images/reference/shop-before.webp" alt="改造前的老店招牌" />
+        <img :src="publicAssetUrl('/images/reference/shop-before.webp')" alt="改造前的老店招牌" />
         <ArrowRight :size="25" />
         <img
-          src="/images/reference/shop-after.webp"
+          :src="publicAssetUrl('/images/reference/shop-after.webp')"
           alt="改造后的张记杂货铺招牌"
         />
       </div>

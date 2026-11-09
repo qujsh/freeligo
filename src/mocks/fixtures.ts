@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "../shared/lib/publicAssetUrl";
 import type { Opportunity, Interest } from "../domain/models";
 const common = {
   publisher: "林间工作室",
@@ -32,7 +33,7 @@ export const opportunities: Opportunity[] = [
     reward: "8,000–12,000",
     unit: "项目预算",
     skills: ["活动策划", "多人协作"],
-    image: "/images/reference/market.webp",
+    image: publicAssetUrl("/images/reference/market.webp"),
     publisher: "街角共创计划",
     capacity: 3,
     scope: [
@@ -56,7 +57,7 @@ export const opportunities: Opportunity[] = [
     reward: "800–1,500",
     unit: "项目",
     skills: ["平面设计", "海报设计"],
-    image: "/images/reference/tech-poster.webp",
+    image: publicAssetUrl("/images/reference/tech-poster.webp"),
     tags: ["设计创意", "线上", "活动海报"],
     newcomer: true,
     scope: [
@@ -102,7 +103,7 @@ export const opportunities: Opportunity[] = [
     reward: "1,200–1,800",
     unit: "项目",
     skills: ["纪实摄影", "活动跟拍"],
-    image: "/images/reference/bookstore.webp",
+    image: publicAssetUrl("/images/reference/bookstore.webp"),
     tags: ["摄影影像", "线下", "商业空间"],
     publisher: "街角共创计划",
   },
@@ -119,7 +120,7 @@ export const opportunities: Opportunity[] = [
     reward: "200–400",
     unit: "次",
     skills: ["家具修复", "木工"],
-    image: "/images/reference/chair-repair.webp",
+    image: publicAssetUrl("/images/reference/chair-repair.webp"),
     tags: ["生活服务", "线下", "家具维修"],
     video:
       "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
@@ -156,7 +157,7 @@ export const opportunities: Opportunity[] = [
     reward: "1,000–1,500",
     unit: "支",
     skills: ["视频剪辑", "叙事"],
-    image: "/images/wood.jpg",
+    image: publicAssetUrl("/images/wood.jpg"),
     video:
       "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
     publisher: "慢工手作",

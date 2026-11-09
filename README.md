@@ -114,3 +114,7 @@ npm run dev
 ## 发布标题与简介去重（2026-10-29）
 
 任务与项目详情共用任务标题、任务简介，不再单独设置或展示项目名称、项目介绍。接口 `content.project` 仅保留工作范围 `tasks`；整份拆解、层级展示和确认发布规则不变。此更新替代上述独立项目介绍的旧说明。
+
+## 七牛云手动部署
+
+生产构建、GitHub Secrets/Variables、SPA 回退、CDN 缓存与历史版本恢复步骤见 [C 端七牛部署说明](deploy/web/README.md)。工作流名称为 **Deploy C frontend to Qiniu**，仅从 main 手动发布。

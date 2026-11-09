@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAssetUrl } from "../../../shared/lib/publicAssetUrl";
 import type { Note } from "../noteModels";
 defineProps<{ note: Note; compact?: boolean }>();
 defineEmits<{ open: [note: Note] }>();
@@ -12,7 +13,7 @@ defineEmits<{ open: [note: Note] }>();
     <img
       v-if="note.image"
       class="note-card__photo"
-      :src="`/images/notes/${note.image}.webp`"
+      :src="publicAssetUrl(`/images/notes/${note.image}.webp`)"
       :alt="note.title"
       :loading="compact ? 'lazy' : 'eager'"
     />
@@ -27,7 +28,7 @@ defineEmits<{ open: [note: Note] }>();
       <span class="note-card__author"
         ><img
           v-if="note.avatar"
-          :src="`/images/notes/avatar-${note.avatar}.webp`"
+          :src="publicAssetUrl(`/images/notes/avatar-${note.avatar}.webp`)"
           alt=""
         /><span v-else class="note-card__initial">{{
           note.author.slice(0, 1)
