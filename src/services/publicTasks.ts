@@ -41,7 +41,6 @@ export const rewardItemSchema = z.object({
 const contentSchema = z.object({
   details: z
     .object({
-      goal: z.string(),
       collaboration: z.string().nullable(),
       rewards: z.array(rewardItemSchema),
     })

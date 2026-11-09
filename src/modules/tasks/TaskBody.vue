@@ -47,10 +47,6 @@ const states: Record<string, string> = {
         ><Clock :size="15" />预计投入 {{ item.duration }}</span
       ><span><Users :size="15" />招募 {{ item.capacity }} 人</span>
     </div>
-    <section v-if="item.details?.goal">
-      <h2>任务目标</h2>
-      <p>{{ item.details.goal }}</p>
-    </section>
     <section v-if="nodes.length || item.scope.length">
       <h2>{{ compact ? "主要工作" : "工作范围" }}</h2>
       <template v-if="nodes.length">

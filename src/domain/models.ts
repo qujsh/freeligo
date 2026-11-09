@@ -11,7 +11,6 @@ export interface RewardItem {
   handover: string | null;
 }
 export interface TaskDetail {
-  goal: string;
   collaboration: string | null;
   rewards: RewardItem[];
 }

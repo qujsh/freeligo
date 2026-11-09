@@ -220,7 +220,6 @@ describe("public task HTTP contract", () => {
 describe("complete task detail contract", () => {
   it("preserves frozen scope, structured noncash rewards and closed recruitment", async () => {
     const details = {
-      goal: "完成社区交付",
       collaboration: "远程同步",
       rewards: [
         {
