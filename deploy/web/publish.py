@@ -46,7 +46,7 @@ def configuration(env):
         raise ValueError("发布或回滚版本必须是完整 40 位 Git SHA")
     bucket = env.get("QINIU_WEB_BUCKET", "")
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,61}[a-z0-9]", bucket):
-        raise ValueError("请配置独立前端空间 QINIU_WEB_BUCKET，例如 freeligo-c-web")
+        raise ValueError("请配置独立前端空间 QINIU_WEB_BUCKET，例如 freeligo-web")
     origin = https_origin(env.get("QINIU_WEB_ORIGIN", ""), "QINIU_WEB_ORIGIN")
     api = https_origin(env.get("VITE_API_BASE_URL", ""), "VITE_API_BASE_URL")
     if env.get("VITE_DATA_SOURCE") != "api":
@@ -81,7 +81,7 @@ def entry_assets(content, sha):
 
 
 def fetch(url, html=False):
-    request = Request(url, headers={"Cache-Control": "no-cache", "User-Agent": "freeligo-c-web-deploy"})
+    request = Request(url, headers={"Cache-Control": "no-cache", "User-Agent": "freeligo-web-deploy"})
     with urlopen(request, timeout=10) as response:
         if (response.status != 200 or response.url != url
                 or urlparse(response.url).scheme != "https"

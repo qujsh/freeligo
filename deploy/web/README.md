@@ -4,7 +4,7 @@
 
 ## 一次性准备
 
-1. 推荐新建独立**公开空间** `freeligo-c-web`。它与 B 端的 `freeligo-web`、业务图片空间均分开，避免根 `index.html` 相互覆盖。
+1. C 端使用**公开空间** `freeligo-web`。它与 B 端的 `freeligo-workbench`、业务图片空间均分开，避免根 `index.html` 相互覆盖。
 2. 绑定 C 端自定义 HTTPS 域名并配置 DNS/证书，例如 `https://www.example.com`。大陆 CDN 使用已备案域名。七牛新空间测试域名有静态页面/强制下载限制，脚本不接受测试域名。
 3. 配置默认首页 `/index.html`。`/`、`/index.html` 返回 `200 text/html`，不能强制下载或重定向。
 4. 当前 Vue Router 保留 History 路由。配置页面路径**内部回退到根 index.html、HTTP 200、地址栏路径不变**，例如 `/opportunities`、`/favorites`、`/projects/:id`、`/tasks/:id`。只设置默认首页或返回 404 的错误页不够。`/releases/*` 的真实资源按原路径访问，缺失文件返回 404，不返回 HTML。如果所用七牛/CDN方案不支持该回退，需要另行调整托管方案或改用 Hash 路由，不能仅填写确认变量。
@@ -31,7 +31,6 @@ Repository variables：
 
 | 名称 | 示例/要求 |
 | --- | --- |
-| `QINIU_WEB_BUCKET` | `freeligo-c-web`，独立公开空间 |
 | `QINIU_WEB_ORIGIN` | `https://www.example.com`，C 端域名，不附加路径 |
 | `VITE_API_BASE_URL` | `https://api.example.com`，不附加 `/api` |
 | `QINIU_SPA_FALLBACK_READY` | 完成页面回退和缓存配置后填写 `true` |
@@ -78,3 +77,5 @@ npm run check
 上线后另行验收真实七牛回退/缓存、Cookie/CORS、当前后端协议，以及桌面和手机的真实业务流程。不要把静态发布绿灯当作业务验收通过。
 
 本次本地验证：类型检查、lint（0 错误，16 条既有格式警告）、15 项前端测试、10 项发布脚本测试和版本目录生产构建通过；用真实浏览器在 1440×900、390×844 验证首页 16 张图片的版本路径、笔记阅读图片和 `/opportunities` 刷新。API 使用模拟的 401 响应，不调用真实后端；对应网络错误为预期，不代表真实业务可用。静态回退由本地预览模拟，七牛实际回退仍需上线后验收。另使用实际构建产物完成 48 个对象的内存发布演练，没有云端上传。
+
+目标空间已在工作流中固定为 `freeligo-web`；无需配置 Repository variable `QINIU_WEB_BUCKET`，已有同名变量不再被读取。
