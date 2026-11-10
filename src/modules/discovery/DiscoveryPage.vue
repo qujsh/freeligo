@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAssetUrl } from "../../shared/lib/publicAssetUrl";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
@@ -207,7 +208,7 @@ function favorite(id: string) {
         </div>
       </div>
       <div class="hero-photo">
-        <img src="/images/hero.jpg" alt="在自然光下共同讨论和工作的伙伴" />
+        <img :src="publicAssetUrl('/images/hero.jpg')" alt="在自然光下共同讨论和工作的伙伴" />
         <div class="photo-caption">
           <span>普通人的本领，也有不普通的可能。</span>
           <small>一起做，让事情发生。</small>

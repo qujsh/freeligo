@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { publicAssetUrl } from "../shared/lib/publicAssetUrl";
 import { useQueryClient } from "@tanstack/vue-query";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import {
@@ -15,12 +16,15 @@ import { useSession } from "../modules/account/session";
 import { service } from "../services";
 import { isLive } from "../services/publicTasks";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 const growthOpen = ref(false);
+const route = useRoute();
 const session = useSession(),
   client = useQueryClient(),
   router = useRouter();
-onMounted(() => session.restore());
+onMounted(() => {
+  if (route.path !== "/") void session.restore();
+});
 async function reset() {
   try {
     await ElMessageBox.confirm(
@@ -44,7 +48,7 @@ function publish() {
 </script>
 <template>
   <el-config-provider :locale="zhCn">
-    <header class="site-header reference-header">
+    <header v-if="route.path !== '/'" class="site-header reference-header">
       <router-link class="brand" to="/" aria-label="自由人联合体首页">
         <UnionLogo />
         <span>
@@ -105,7 +109,7 @@ function publish() {
                 </span>
                 <img
                   v-else
-                  src="/images/reference/avatar.webp"
+                  :src="publicAssetUrl('/images/reference/avatar.webp')"
                   alt="演示头像"
                 />
               </span>
@@ -134,7 +138,7 @@ function publish() {
       </div>
     </header>
     <router-view />
-    <footer class="site-footer">
+    <footer v-if="route.path !== '/'" class="site-footer">
       <router-link class="brand" to="/">自由人联合体</router-link>
       <p>
         {{
@@ -155,10 +159,10 @@ function publish() {
       width="min(660px, 92vw)"
     >
       <div class="growth-comparison">
-        <img src="/images/reference/shop-before.webp" alt="改造前的老店招牌" />
+        <img :src="publicAssetUrl('/images/reference/shop-before.webp')" alt="改造前的老店招牌" />
         <ArrowRight :size="25" />
         <img
-          src="/images/reference/shop-after.webp"
+          :src="publicAssetUrl('/images/reference/shop-after.webp')"
           alt="改造后的张记杂货铺招牌"
         />
       </div>
@@ -177,9 +181,8 @@ function publish() {
       @close="session.cancel"
     >
       <LoginForm v-if="isLive" @logged-in="client.invalidateQueries()" />
-      <template v-else
-        >
-<p class="muted">原型不收集手机号，也不会进行真实登录。</p>
+      <template v-else>
+        <p class="muted">原型不收集手机号，也不会进行真实登录。</p>
         <button
           class="demo-identity"
           @click="

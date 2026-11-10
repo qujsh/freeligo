@@ -23,3 +23,9 @@ test-results/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Deployment helper output
+__pycache__/
+web-deployment-result.json
+output/
+.playwright-cli/
