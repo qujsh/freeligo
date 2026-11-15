@@ -2,57 +2,153 @@
 import { publicAssetUrl } from "../../shared/lib/publicAssetUrl";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  Search,
-  LayoutGrid,
-  Camera,
-  Wrench,
-  CodeXml,
-  ArrowLeft,
-  PenLine,
-} from "lucide-vue-next";
+import { Search, ArrowLeft, PenLine } from "lucide-vue-next";
 import { ElMessage } from "element-plus";
+import { useSession } from "../account/session";
+import { useShareEngagements } from "../notes/useShareEngagements";
+import ShareActions from "../notes/components/ShareActions.vue";
+import { useAccountProfile } from "../account/useAccountProfile";
+import ProfileOverview from "../account/components/ProfileOverview.vue";
+import ProfileEditor from "../account/components/ProfileEditor.vue";
+import AccountSettings from "../account/components/AccountSettings.vue";
+import type { ProfileInput } from "../../services/accountProfile";
 import NotesHeader from "../notes/components/NotesHeader.vue";
 import NoteCard from "../notes/components/NoteCard.vue";
+import NoteReader from "../notes/components/NoteReader.vue";
 import { sampleNotes } from "../notes/sampleNotes";
 import { useLocalNotes } from "../notes/useLocalNotes";
+import { usePublicNotes } from "../notes/usePublicNotes";
+import { useNoteMasonry } from "../notes/useNoteMasonry";
 import type { Note } from "../notes/noteModels";
 const route = useRoute(),
   router = useRouter();
 const { notes, draft, storageError, save } = useLocalNotes();
 const search = ref(String(route.query.q ?? ""));
+const noteGrid = ref<HTMLElement | null>(null);
+useNoteMasonry(noteGrid);
 watch(
   () => route.query.q,
   (value) => {
     search.value = String(value ?? "");
   },
 );
-const categories = [
-  { id: "", label: "全部", icon: LayoutGrid },
-  { id: "photography", label: "摄影影像", icon: Camera },
-  { id: "life", label: "生活经验", icon: Wrench },
-  { id: "tools", label: "工具开发", icon: CodeXml },
-];
+const session = useSession();
+const { profile, save: saveProfile, viewer, avatar } = useAccountProfile();
+const editingProfile = ref(false);
+watch(viewer, () => {
+  editingProfile.value = false;
+  saveProfile.reset();
+});
+const isSettings = computed(() => route.query.view === "settings");
+const isFavorites = computed(() => route.query.view === "favorites");
 const isMine = computed(() => route.query.view === "mine");
 const isGrowth = computed(() => route.query.view === "growth");
-const allNotes = computed(() => [...notes.value, ...sampleNotes]);
+const isMock = import.meta.env.VITE_DATA_SOURCE === "mock";
+const keyword = computed(() => String(route.query.q ?? "").trim());
+const localSelected = computed(() =>
+  [...notes.value, ...(isMock || isGrowth.value ? sampleNotes : [])].find(
+    (note) => note.id === route.query.note,
+  ),
+);
+const remoteId = computed(() =>
+  !isMock && !localSelected.value && route.query.note
+    ? String(route.query.note)
+    : "",
+);
+const { list, detail, items } = usePublicNotes(
+  keyword,
+  computed(
+    () => !isMock && !isMine.value && !isGrowth.value && !isSettings.value,
+  ),
+  remoteId,
+  isFavorites,
+);
 const visible = computed(() => {
-  const keyword = String(route.query.q ?? "")
-    .trim()
-    .toLowerCase();
-  return allNotes.value.filter(
+  if (!isMine.value && !isMock) return items.value;
+  return (isMine.value ? notes.value : sampleNotes).filter(
     (note) =>
-      (!isMine.value || note.own) &&
-      (!route.query.category || note.category === route.query.category) &&
-      (!keyword ||
-        [note.title, note.summary, ...note.tags, note.author]
-          .join(" ")
-          .toLowerCase()
-          .includes(keyword)),
+      !keyword.value ||
+      [note.title, note.content]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword.value.toLowerCase()),
   );
 });
-const selected = computed(() =>
-  allNotes.value.find((note) => note.id === route.query.note),
+const selected = computed(
+  () =>
+    localSelected.value ??
+    (!detail.isError.value && !detail.isFetching.value
+      ? detail.data.value
+      : undefined),
+);
+const engagementIds = computed(() =>
+  [
+    ...new Set([
+      ...visible.value.filter((note) => note.remote).map((note) => note.id),
+      ...(selected.value?.remote ? [selected.value.id] : []),
+    ]),
+  ].sort(),
+);
+const {
+  state: engagementState,
+  change: changeEngagement,
+  busy: engagementBusy,
+} = useShareEngagements(engagementIds);
+/** 收藏入口恢复真实登录后导航；本机笔记继续保持独立。 */
+function showFavorites() {
+  session.requireLogin(() =>
+    query({ view: "favorites", q: undefined, note: undefined }),
+  );
+}
+/** 编辑真实账号资料，等待完整资料后创建独立表单，避免用空值覆盖尚未读取的字段。 */
+function editProfile() {
+  session.requireLogin(() => {
+    if (!profile.data.value) {
+      ElMessage.warning("请先等待资料加载，或重试读取资料");
+      return;
+    }
+    saveProfile.reset();
+    editingProfile.value = true;
+  });
+}
+async function submitProfile(value: ProfileInput) {
+  const owner = viewer.value;
+  try {
+    await saveProfile.mutateAsync({ value, viewer: owner });
+    if (viewer.value === owner) {
+      editingProfile.value = false;
+      ElMessage.success("个人资料已更新");
+    }
+  } catch {
+    /* 错误留在表单中，保留用户正在编辑的内容。 */
+  }
+}
+async function signout() {
+  try {
+    await session.logout();
+  } catch {
+    ElMessage.error("退出失败，请重试");
+  }
+}
+const readerImages = computed(() => {
+  const note = selected.value;
+  if (!note) return [];
+  if (note.imageUrls?.length) return note.imageUrls;
+  if (note.imageUrl) return [note.imageUrl];
+  return note.image ? [publicAssetUrl(`/images/notes/${note.image}.webp`)] : [];
+});
+const reading = computed(() => !!route.query.note);
+const feedLoading = computed(
+  () =>
+    !isMine.value &&
+    !isMock &&
+    (!isFavorites.value || !!session.user) &&
+    list.isPending.value,
+);
+const feedError = computed(() =>
+  !isMine.value && !isMock && !list.isFetchNextPageError.value
+    ? list.error.value
+    : null,
 );
 const composing = computed(() => route.query.compose === "1");
 function query(values: Record<string, string | undefined>) {
@@ -84,13 +180,40 @@ function saveNote() {
   <div class="notes-app">
     <NotesHeader
       :growth="isGrowth"
+      :personal="isMine || isFavorites || isSettings"
+      :avatar="avatar"
+      :bio="profile.data.value?.bio || undefined"
+      :note-count="notes.length"
+      :user-name="session.user?.name"
+      :live="!isMock"
+      @profile="query({ view: 'mine', q: undefined, note: undefined })"
+      @settings="query({ view: 'settings', q: undefined, note: undefined })"
+      @favorites="showFavorites"
+      @login="session.requireLogin(() => {})"
+      @logout="signout"
       @mine="query({ view: 'mine', q: undefined, category: undefined })"
       @compose="query({ compose: '1' })"
     />
-    <main class="notes-main">
-      <template v-if="!isGrowth">
+    <main
+      class="notes-main"
+      :class="{ 'notes-main--personal': isMine || isFavorites }"
+    >
+      <AccountSettings
+        v-if="isSettings"
+        :profile="profile.data.value"
+        :avatar="avatar"
+        :loading="profile.isPending.value"
+        :error="profile.error.value?.message"
+        :live="!isMock"
+        @back="query({ view: 'mine' })"
+        @edit="editProfile"
+        @logout="signout"
+        @login="session.requireLogin(() => {})"
+        @retry="profile.refetch()"
+      />
+      <template v-else-if="!isGrowth">
         <section
-          v-if="!isMine"
+          v-if="!isMine && !isFavorites"
           class="notes-hero"
           aria-labelledby="notes-headline"
         >
@@ -117,60 +240,99 @@ function saveNote() {
             fetchpriority="high"
           />
         </section>
-        <div v-else class="notes-personal">
-          <button class="notes-back" @click="router.push('/')">
-            <ArrowLeft :size="18" />返回发现
-          </button>
-          <h1>我的笔记</h1>
-          <p>
-            把生活里的想法，一点点留下来。这里保存着你在这台设备上写下的笔记。
-          </p>
+        <ProfileOverview
+          v-else
+          :name="session.user?.name"
+          :bio="profile.data.value?.bio || undefined"
+          :avatar="avatar"
+          :favorites="isFavorites"
+          :live="!isMock"
+          :loading="!!session.user && profile.isPending.value && !isMock"
+          :error="profile.error.value?.message"
+          @edit="editProfile"
+          @settings="query({ view: 'settings', q: undefined })"
+          @login="session.requireLogin(() => {})"
+          @retry="profile.refetch()"
+          @mine="query({ view: 'mine', q: undefined })"
+          @favorites="showFavorites"
+        />
+        <div v-if="isMine" class="member-content-bar">
+          <span class="member-content-bar__filter">全部<span>仅本机</span></span
+          ><span>共 {{ notes.length }} 篇笔记</span>
         </div>
+        <form
+          v-if="isFavorites && session.user"
+          class="notes-search notes-favorites-search"
+          role="search"
+          @submit.prevent="submitSearch"
+        >
+          <Search :size="21" /><input
+            v-model="search"
+            aria-label="搜索收藏笔记"
+            placeholder="搜索收藏笔记"
+            type="search"
+          /><button class="notes-primary" type="submit">搜索</button>
+        </form>
         <section aria-labelledby="notes-section-title">
-          <div class="notes-toolbar">
+          <div v-if="!isMine && !isFavorites" class="notes-toolbar">
             <h2 id="notes-section-title">
-              {{ isMine ? "本机笔记" : "发现笔记" }}
+              {{ isMine ? "本机笔记" : isFavorites ? "收藏笔记" : "发现笔记" }}
             </h2>
-            <div class="notes-categories" aria-label="笔记分类">
-              <button
-                v-for="category in categories"
-                :key="category.id"
-                :class="{
-                  active: String(route.query.category ?? '') === category.id,
-                }"
-                :aria-pressed="
-                  String(route.query.category ?? '') === category.id
-                "
-                @click="query({ category: category.id || undefined })"
-              >
-                <component :is="category.icon" :size="23" />{{ category.label }}
-              </button>
-            </div>
           </div>
           <div v-if="route.query.q" class="notes-search-result" role="status">
-            “{{ route.query.q }}”的搜索结果 · {{ visible.length }} 篇<button
-              @click="query({ q: undefined })"
-            >
+            “{{ route.query.q }}”的搜索结果 · 已加载
+            {{ visible.length }} 篇<button @click="query({ q: undefined })">
               清除搜索
             </button>
           </div>
-          <div v-if="visible.length" class="notes-grid">
+          <div v-if="isFavorites && !session.user" class="notes-empty">
+            <h3>登录后查看我的收藏</h3>
+            <button class="notes-primary" @click="showFavorites">
+              登录并继续
+            </button>
+          </div>
+          <el-skeleton
+            v-else-if="feedLoading"
+            :rows="8"
+            animated
+            aria-label="正在加载公开分享"
+          />
+          <div v-else-if="feedError" class="notes-empty" role="alert">
+            <h3>公开分享加载失败</h3>
+            <p>{{ feedError.message }}</p>
+            <button class="notes-primary" @click="list.refetch()">重试</button>
+          </div>
+          <div v-else-if="visible.length" ref="noteGrid" class="notes-grid">
             <NoteCard
-              v-for="(note, index) in visible"
+              v-for="note in visible"
               :key="note.id"
               :note="note"
-              :compact="index >= 4 && !!note.image"
+              :engagement="engagementState.data.value?.[note.id]"
+              :busy="engagementBusy"
+              :engagement-failed="engagementState.isError.value"
+              @like="changeEngagement(note.id, 'like')"
+              @retry="engagementState.refetch()"
               @open="open"
             />
           </div>
           <div v-else class="notes-empty">
             <PenLine :size="32" />
-            <h3>{{ isMine ? "还没有写下笔记" : "还没有找到相关笔记" }}</h3>
+            <h3>
+              {{
+                isMine
+                  ? "还没有写下笔记"
+                  : isFavorites
+                    ? "还没有相关收藏"
+                    : "还没有找到相关笔记"
+              }}
+            </h3>
             <p>
               {{
                 isMine
                   ? "一张照片、一点经验，都值得记录。"
-                  : "换个关键词，或者看看其他分类。"
+                  : isFavorites
+                    ? "在发现中收藏喜欢的内容，稍后回来慢慢看。"
+                    : "换个关键词，或稍后再来看看。"
               }}
             </p>
             <button
@@ -178,11 +340,40 @@ function saveNote() {
               @click="
                 isMine
                   ? query({ compose: '1' })
-                  : query({ q: undefined, category: undefined })
+                  : isFavorites
+                    ? router.push('/')
+                    : query({ q: undefined, category: undefined })
               "
             >
-              {{ isMine ? "写第一篇笔记" : "查看全部笔记" }}
+              {{
+                isMine
+                  ? "写第一篇笔记"
+                  : isFavorites
+                    ? "去发现看看"
+                    : "查看全部笔记"
+              }}
             </button>
+          </div>
+          <div
+            v-if="!isMine && !isMock && visible.length"
+            class="notes-pagination"
+          >
+            <p v-if="list.isFetchNextPageError.value" role="alert">
+              加载下一页失败，请重试。
+            </p>
+            <button
+              v-if="list.hasNextPage.value"
+              class="notes-primary"
+              :disabled="list.isFetchingNextPage.value"
+              @click="list.fetchNextPage()"
+            >
+              {{
+                list.isFetchingNextPage.value ? "正在加载…" : "加载更多"
+              }}
+</button
+            ><span v-else
+              >已经看到全部{{ isFavorites ? "收藏" : "公开分享" }}</span
+            >
           </div>
         </section>
       </template>
@@ -193,9 +384,12 @@ function saveNote() {
         <h1>每一次动手，都有一点成长。</h1>
         <p>从一个想法，到一件做成的事。回看过程，也看见自己的变化。</p>
         <div class="notes-growth__feature">
-          <img :src="publicAssetUrl('/images/notes/repair.webp')" alt="修复木椅的过程" />
+          <img
+            :src="publicAssetUrl('/images/notes/repair.webp')"
+            alt="修复木椅的过程"
+          />
           <div>
-            <span>生活经验 · 手工修复</span>
+            <span>成果故事 · 演示内容</span>
             <h2>修好一把椅子，<br />也是在修复生活。</h2>
             <p>
               从检查连接点到重新加固，把一次动手的过程，变成可以分享的经验。
@@ -209,44 +403,89 @@ function saveNote() {
           这里展示参考笔记故事，个人成长数据尚未接入。
         </p>
       </section>
+      <p v-if="isMine" class="member-local-hint">
+        本机笔记仅保存在当前浏览器，不会公开发布或同步到其他设备。
+      </p>
       <footer class="notes-footer">
         生活里的小发现，值得被看见。<span
-          >参考内容为演示笔记 · 新笔记仅保存在本机</span
+          >{{ isMock ? "当前为演示模式" : "发现内容来自审核通过的公开分享" }} ·
+          新笔记仅保存在本机</span
         >
-      </footer>
+      <span><router-link to="/legal/terms" target="_blank">用户协议</router-link> · <router-link to="/legal/privacy" target="_blank">隐私政策</router-link></span></footer>
     </main>
     <el-dialog
-      :model-value="!!selected"
-      width="min(740px, 94vw)"
+      :model-value="reading"
+      class="notes-reader-dialog"
+      body-class="notes-reader-dialog-body"
+      :width="readerImages.length ? 'min(1120px, 94vw)' : 'min(740px, 94vw)'"
+      top="6vh"
       title="笔记"
+      :show-close="false"
+      header-class="notes-reader-dialog-header"
       @close="query({ note: undefined })"
-      >
-<article v-if="selected" class="notes-reader">
-        <img
-          v-if="selected.image"
-          :src="publicAssetUrl(`/images/notes/${selected.image}.webp`)"
-          :alt="selected.title"
-        />
-        <h1>{{ selected.title }}</h1>
-        <p class="notes-reader__meta">
-          {{ selected.author }} · {{ selected.date }} ·
-          {{ selected.own ? "本机笔记" : "演示笔记" }}
-        </p>
-        <div class="notes-reader__content">{{ selected.content }}</div>
-        <div class="notes-reader__tags">
-          <span v-for="tag in selected.tags" :key="tag">#{{ tag }}</span>
-        </div>
-      </article>
-</el-dialog
     >
+      <template #header></template>
+      <el-skeleton
+        v-if="remoteId && detail.isFetching.value"
+        :rows="8"
+        animated
+      />
+      <div
+        v-else-if="remoteId && detail.isError.value"
+        class="notes-empty"
+        role="alert"
+      >
+        <h3>这篇分享暂时无法查看</h3>
+        <p>{{ detail.error.value?.message }}</p>
+        <button class="notes-primary" @click="detail.refetch()">重试</button>
+      </div>
+      <NoteReader
+        v-else-if="selected"
+        :note="selected"
+        :images="readerImages"
+        @reference="query({ note: $event })"
+      >
+        <template v-if="selected.remote" #actions>
+          <ShareActions
+            :state="engagementState.data.value?.[selected.id]"
+            :busy="engagementBusy"
+            :failed="engagementState.isError.value"
+            @like="changeEngagement(selected.id, 'like')"
+            @favorite="changeEngagement(selected.id, 'favorite')"
+            @retry="engagementState.refetch()"
+          />
+        </template>
+      </NoteReader>
+    </el-dialog>
+    <el-dialog
+      v-if="editingProfile && profile.data.value && session.user"
+      :model-value="editingProfile"
+      title="编辑个人资料"
+      width="min(540px, 94vw)"
+      destroy-on-close
+      :close-on-click-modal="!saveProfile.isPending.value"
+      :close-on-press-escape="!saveProfile.isPending.value"
+      :show-close="!saveProfile.isPending.value"
+      @close="editingProfile = false"
+      >
+<ProfileEditor
+        :profile="profile.data.value"
+        :busy="saveProfile.isPending.value"
+        :error="saveProfile.error.value?.message"
+        @cancel="editingProfile = false"
+        @save="submitProfile"
+    />
+</el-dialog>
     <el-dialog
       :model-value="composing"
       width="min(700px, 94vw)"
       title="写下今天的想法"
       @close="query({ compose: undefined })"
-      >
-<form class="notes-editor" @submit.prevent="saveNote">
-        <p>不必是完整的故事，一点发现也很好。草稿会自动保存在本机。</p>
+    >
+      <form class="notes-editor" @submit.prevent="saveNote">
+        <p>
+          不必是完整的故事，一点发现也很好。这里是本机体验，草稿和笔记不会上传。
+        </p>
         <label for="note-title">标题</label
         ><el-input
           id="note-title"
@@ -254,19 +493,7 @@ function saveNote() {
           placeholder="给这篇笔记起个名字"
           maxlength="60"
           show-word-limit
-        /><label for="note-category">分类</label
-        ><el-select
-          id="note-category"
-          v-model="draft.category"
-          aria-label="笔记分类"
-          >
-<el-option
-            v-for="category in categories.slice(1)"
-            :key="category.id"
-            :value="category.id"
-            :label="category.label" />
-</el-select
-        ><label for="note-content">正文</label
+        /><label for="note-content">正文</label
         ><el-input
           id="note-content"
           v-model="draft.content"
@@ -284,8 +511,7 @@ function saveNote() {
           ><button class="notes-primary" type="submit">保存笔记</button>
         </div>
       </form>
-</el-dialog
-    >
+    </el-dialog>
   </div>
 </template>
 <style src="../notes/notesPage.css"></style>

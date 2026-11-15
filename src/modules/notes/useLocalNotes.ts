@@ -60,11 +60,7 @@ export function useLocalNotes() {
       content,
       summary: content.slice(0, 90),
       category: draft.value.category,
-      tags: [
-        { photography: "摄影影像", life: "生活经验", tools: "工具开发" }[
-          draft.value.category
-        ],
-      ],
+      tags: [],
       author: "我",
       date: new Intl.DateTimeFormat("zh-CN", {
         month: "long",

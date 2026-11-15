@@ -6,6 +6,7 @@ export const router = createRouter({
     return saved ?? { top: 0 };
   },
   routes: [
+    { path: "/legal/:kind/:version?", component: () => import("../modules/legal/LegalPage.vue") },
     {
       path: "/",
       component: () => import("../modules/discovery/HomePage.vue"),

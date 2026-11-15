@@ -107,5 +107,7 @@ export const account = {
     ),
   login: (phone: string, code: string) =>
     taskRequest("auth/sms/login", userSchema, { phone, code }),
+  passwordLogin: (phone: string, password: string) =>
+    taskRequest("auth/password/login", userSchema, { phone, password }),
   logout: () => taskRequest("auth/logout", z.string(), {}),
 };
