@@ -69,7 +69,7 @@ defineEmits<{
         :aria-current="!favorites ? 'page' : undefined"
         @click="$emit('mine')"
       >
-        我的笔记<span>本机</span>
+        我的笔记
 </button
       ><button
         v-if="live"

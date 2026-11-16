@@ -9,7 +9,7 @@ defineProps<{
   bio?: string;
   avatar?: string;
   live: boolean;
-  noteCount: number;
+  noteCount?: number;
 }>();
 defineEmits<{
   mine: [];
@@ -43,7 +43,7 @@ defineEmits<{
     </nav>
     <div class="notes-actions notes-actions--member">
       <button class="notes-primary" @click="$emit('compose')">
-        <PenLine :size="18" /><span>写笔记<small>本机</small></span>
+        <PenLine :size="18" /><span>写笔记</span>
 </button
       ><span class="notes-actions__divider"></span
       ><AccountMenu

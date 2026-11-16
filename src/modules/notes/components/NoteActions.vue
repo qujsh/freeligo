@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Heart, Star, RefreshCw } from "lucide-vue-next";
-import type { ShareEngagement } from "../../../services/publicShares";
+import type { NoteEngagement } from "../../../services/publicNotes";
 defineProps<{
-  state?: ShareEngagement;
+  state?: NoteEngagement;
   busy?: boolean;
   compact?: boolean;
   failed?: boolean;
@@ -10,10 +10,10 @@ defineProps<{
 defineEmits<{ like: []; favorite: []; retry: [] }>();
 </script>
 <template>
-  <div class="share-actions" :class="{ 'share-actions--compact': compact }">
+  <div class="note-actions" :class="{ 'note-actions--compact': compact }">
     <button
       v-if="failed && !state"
-      class="share-actions__retry"
+      class="note-actions__retry"
       aria-label="重试加载互动状态"
       @click.stop="$emit('retry')"
     >
@@ -51,12 +51,12 @@ defineEmits<{ like: []; favorite: []; retry: [] }>();
   </div>
 </template>
 <style scoped>
-.share-actions {
+.note-actions {
   display: flex;
   align-items: center;
   gap: 26px;
 }
-.share-actions button {
+.note-actions button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -69,29 +69,29 @@ defineEmits<{ like: []; favorite: []; retry: [] }>();
   cursor: pointer;
   white-space: nowrap;
 }
-.share-actions button.selected {
+.note-actions button.selected {
   color: #ee4c38;
 }
-.share-actions button:disabled {
+.note-actions button:disabled {
   cursor: default;
   opacity: 0.5;
 }
-.share-actions button:focus-visible {
+.note-actions button:focus-visible {
   outline: 2px solid #f24b13;
   outline-offset: 2px;
   border-radius: 4px;
 }
-.share-actions--compact {
+.note-actions--compact {
   flex-shrink: 0;
   margin-left: auto;
 }
-.share-actions--compact button {
+.note-actions--compact button {
   font-size: 12px;
   padding: 2px;
   gap: 4px;
 }
 @media (hover: hover) {
-  .share-actions button:not(:disabled):hover {
+  .note-actions button:not(:disabled):hover {
     color: #ee4c38;
   }
 }

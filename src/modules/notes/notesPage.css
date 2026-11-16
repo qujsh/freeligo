@@ -710,3 +710,10 @@
 /* 文字入口只变色，不复用主按钮的亮度滤镜或灰底，避免悬停时整块闪变。 */
 .notes-actions--member > .notes-primary:hover { background:transparent; color:var(--notes-accent, #e95520); }
 .notes-actions--member > .notes-primary small { display:none; }
+
+.member-note-sources { display:flex; gap:8px; flex-wrap:wrap; }
+.member-note-sources button { border:0; padding:8px 16px; border-radius:20px; background:transparent; color:#777c85; font:inherit; cursor:pointer; }
+.member-note-sources button.active { background:#fff0e7; color:var(--notes-accent); }
+.member-note-sources button:focus { outline:none; }
+.member-note-sources button:focus-visible { outline:2px solid #92979e; outline-offset:3px; }
+.member-note-sources small { font-size:12px; margin-left:4px; }

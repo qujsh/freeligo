@@ -1,7 +1,7 @@
 import { computed, type Ref } from "vue";
 import { useInfiniteQuery, useQuery } from "@tanstack/vue-query";
 import { useSession } from "../account/session";
-import { publicShares } from "../../services/publicShares";
+import { publicNotes } from "../../services/publicNotes";
 /** 公开列表不混入本机笔记；切换关键词取消旧请求，回到页面重新校验公开状态。 */
 export function usePublicNotes(
   keyword: Ref<string>,
@@ -12,13 +12,13 @@ export function usePublicNotes(
   const session = useSession();
   const list = useInfiniteQuery({
     queryKey: computed(() => [
-      "public-shares",
+      "public-notes",
       favorites.value ? (session.user?.id ?? "guest") : "public",
       favorites.value,
       keyword.value,
     ]),
     queryFn: ({ pageParam, signal }) =>
-      (favorites.value ? publicShares.favorites : publicShares.list)(
+      (favorites.value ? publicNotes.favorites : publicNotes.list)(
         keyword.value,
         pageParam,
         signal,
@@ -33,8 +33,8 @@ export function usePublicNotes(
     retry: false,
   });
   const detail = useQuery({
-    queryKey: computed(() => ["public-share", recordNo.value]),
-    queryFn: ({ signal }) => publicShares.detail(recordNo.value, signal),
+    queryKey: computed(() => ["public-note", recordNo.value]),
+    queryFn: ({ signal }) => publicNotes.detail(recordNo.value, signal),
     enabled: computed(() => !!recordNo.value),
     staleTime: 0,
     gcTime: 0,

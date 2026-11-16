@@ -41,8 +41,8 @@ export function useAccountProfile() {
       if (owner !== viewer.value) return;
       client.setQueryData(["account-profile", owner], data);
       if (session.user) session.user = { ...session.user, name: data.nickname };
-      void client.invalidateQueries({ queryKey: ["public-shares"] });
-      void client.invalidateQueries({ queryKey: ["public-share"] });
+      void client.invalidateQueries({ queryKey: ["public-notes"] });
+      void client.invalidateQueries({ queryKey: ["public-note"] });
     },
   });
   return {

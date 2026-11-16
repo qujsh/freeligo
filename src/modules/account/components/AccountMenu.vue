@@ -12,7 +12,7 @@ const props = defineProps<{
   name?: string;
   bio?: string;
   avatar?: string;
-  noteCount: number;
+  noteCount?: number;
   live: boolean;
   personal: boolean;
 }>();
@@ -112,7 +112,7 @@ function focusLeft(event: FocusEvent) {
             <p>
               {{
                 bio ||
-                (name ? "还没有填写个人简介" : "登录后查看分享、收藏与进展")
+                (name ? "还没有填写个人简介" : "登录后查看笔记、收藏与进展")
               }}
             </p>
         </div>
@@ -122,7 +122,7 @@ function focusLeft(event: FocusEvent) {
           class="account-menu__item"
           @click="select('mine')"
         >
-          <NotebookText :size="22" /><span>我的笔记<small>本机</small></span
+          <NotebookText :size="22" /><span>我的笔记</span
           ><span class="account-menu__count">{{ noteCount }}</span
           ><ChevronRight :size="16" />
         </button>

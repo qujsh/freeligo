@@ -3,20 +3,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { ElMessage } from "element-plus";
 import { useSession } from "../account/session";
 import {
-  publicShares,
-  PublicShareError,
+  publicNotes,
+  PublicNoteError,
   type EngagementKind,
-  type ShareEngagement,
-} from "../../services/publicShares";
+  type NoteEngagement,
+} from "../../services/publicNotes";
 
 /** 互动归远端查询，按身份隔离；写入成功才更新统计，退出后取消并清除旧身份私有缓存。 */
-export function useShareEngagements(ids: Ref<string[]>) {
+export function useNoteEngagements(ids: Ref<string[]>) {
   const session = useSession(),
     client = useQueryClient();
   const viewer = computed(() => session.user?.id ?? "guest");
   const state = useQuery({
-    queryKey: computed(() => ["share-engagements", viewer.value, ids.value]),
-    queryFn: ({ signal }) => publicShares.engagements(ids.value, signal),
+    queryKey: computed(() => ["note-engagements", viewer.value, ids.value]),
+    queryFn: ({ signal }) => publicNotes.engagements(ids.value, signal),
     enabled: computed(() => ids.value.length > 0),
     staleTime: 0,
     retry: false,
@@ -25,11 +25,11 @@ export function useShareEngagements(ids: Ref<string[]>) {
     viewer,
     (_next, previous) => {
       // 先取消旧请求，再移除其缓存；不能让前一个账号的响应回写到新会话。
-      void client.cancelQueries({ queryKey: ["share-engagements", previous] });
-      client.removeQueries({ queryKey: ["share-engagements", previous] });
+      void client.cancelQueries({ queryKey: ["note-engagements", previous] });
+      client.removeQueries({ queryKey: ["note-engagements", previous] });
       if (previous !== "guest") {
-        void client.cancelQueries({ queryKey: ["public-shares", previous] });
-        client.removeQueries({ queryKey: ["public-shares", previous] });
+        void client.cancelQueries({ queryKey: ["public-notes", previous] });
+        client.removeQueries({ queryKey: ["public-notes", previous] });
       }
     },
     { flush: "sync" },
@@ -42,30 +42,30 @@ export function useShareEngagements(ids: Ref<string[]>) {
       viewer: string;
     }) => {
       await client.cancelQueries({
-        queryKey: ["share-engagements", input.viewer],
+        queryKey: ["note-engagements", input.viewer],
       });
-      return publicShares.setEngagement(input.id, input.kind, input.value);
+      return publicNotes.setEngagement(input.id, input.kind, input.value);
     },
     onSuccess: (result, input) => {
       if (viewer.value !== input.viewer) return;
-      client.setQueriesData<Record<string, ShareEngagement>>(
-        { queryKey: ["share-engagements", input.viewer] },
+      client.setQueriesData<Record<string, NoteEngagement>>(
+        { queryKey: ["note-engagements", input.viewer] },
         (old) => ({ ...old, [input.id]: result }),
       );
       void client.invalidateQueries({
-        queryKey: ["share-engagements", input.viewer],
+        queryKey: ["note-engagements", input.viewer],
       });
       if (input.kind === "favorite")
         void client.invalidateQueries({
-          queryKey: ["public-shares", input.viewer],
+          queryKey: ["public-notes", input.viewer],
         });
     },
     onError: (error) => {
-      if (error instanceof PublicShareError && error.status === 401) {
+      if (error instanceof PublicNoteError && error.status === 401) {
         void session.restore(true);
         ElMessage.warning("登录已过期，请重新登录");
       } else ElMessage.error(error.message || "操作失败，请重试");
-      void client.invalidateQueries({ queryKey: ["share-engagements"] });
+      void client.invalidateQueries({ queryKey: ["note-engagements"] });
     },
   });
   /** 未登录先登录并续做明确的设置动作，避免登录后把已有点赞意外翻转取消。 */

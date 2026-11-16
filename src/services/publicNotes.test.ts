@@ -1,11 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { publicShares, publicMediaUrl } from "./publicShares";
+import { publicNotes, publicMediaUrl } from "./publicNotes";
 const card = {
   recordNo: "SHARE-1",
   title: null,
   summary: "真实正文",
   coverUrl:
-    "/api/v1/shares/media/public-content?recordNo=SHARE-1&mediaNo=MEDIA-1",
+    "/api/v1/notes/media/public-content?recordNo=SHARE-1&mediaNo=MEDIA-1",
   publishedAt: "2026-11-11T12:00:00Z",
   author: { nickname: "公开作者", avatarUrl: null },
 };
@@ -29,7 +29,7 @@ it("maps real media and nullable titles, binds search and cursor, propagates can
     );
   vi.stubGlobal("fetch", fetch);
   const signal = new AbortController().signal;
-  const page = await publicShares.list("照片 & 光", "opaque", signal);
+  const page = await publicNotes.list("照片 & 光", "opaque", signal);
   const url = new URL(fetch.mock.calls[0][0], "http://localhost");
   expect(url.searchParams.get("keyword")).toBe("照片 & 光");
   expect(url.searchParams.get("cursor")).toBe("opaque");
@@ -52,13 +52,13 @@ it("does not turn failures or malformed payloads into successful empty lists", a
       .mockResolvedValueOnce(response({ items: [] }))
       .mockResolvedValueOnce(new Response("not json")),
   );
-  await expect(publicShares.detail("SHARE-1")).rejects.toMatchObject({
+  await expect(publicNotes.detail("SHARE-1")).rejects.toMatchObject({
     status: 404,
   });
-  await expect(publicShares.list("")).rejects.toMatchObject({
+  await expect(publicNotes.list("")).rejects.toMatchObject({
     code: "INVALID_API_RESPONSE",
   });
-  await expect(publicShares.list("")).rejects.toMatchObject({
+  await expect(publicNotes.list("")).rejects.toMatchObject({
     code: "INVALID_API_RESPONSE",
   });
 });
@@ -74,7 +74,7 @@ it("renders body as data and rejects arbitrary media origins", async () => {
       }),
     ),
   );
-  expect((await publicShares.detail("SHARE-1")).content).toBe(
+  expect((await publicNotes.detail("SHARE-1")).content).toBe(
     "<script>不执行</script>",
   );
   expect(publicMediaUrl("https://tracker.example/image")).toBeUndefined();
@@ -94,7 +94,7 @@ it("batches real engagement states, validates counts and uses authenticated idem
     return Promise.resolve(response(state));
   });
   vi.stubGlobal("fetch", fetch);
-  await publicShares.engagements(
+  await publicNotes.engagements(
     Array.from({ length: 51 }, (_, i) => `SHARE-${i}`),
   );
   expect(fetch).toHaveBeenCalledTimes(2);
@@ -103,7 +103,7 @@ it("batches real engagement states, validates counts and uses authenticated idem
       .get("recordNos")
       ?.split(","),
   ).toHaveLength(50);
-  await publicShares.setEngagement("SHARE-1", "favorite", true);
+  await publicNotes.setEngagement("SHARE-1", "favorite", true);
   expect(fetch.mock.calls[2][1]).toMatchObject({
     method: "POST",
     credentials: "include",
@@ -111,10 +111,10 @@ it("batches real engagement states, validates counts and uses authenticated idem
   });
   fetch.mockResolvedValueOnce(response({ ...state, likeCount: -1 }));
   await expect(
-    publicShares.setEngagement("SHARE-1", "like", false),
+    publicNotes.setEngagement("SHARE-1", "like", false),
   ).rejects.toMatchObject({ code: "INVALID_API_RESPONSE" });
   fetch.mockResolvedValueOnce(response(null, 401));
   await expect(
-    publicShares.setEngagement("SHARE-1", "like", true),
+    publicNotes.setEngagement("SHARE-1", "like", true),
   ).rejects.toMatchObject({ status: 401 });
 });

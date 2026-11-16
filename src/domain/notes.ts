@@ -6,6 +6,7 @@ export interface Note {
   titleIsExcerpt?: boolean;
   summary: string;
   content: string;
+  document?: import("./noteDocument").NoteDocumentNode;
   category: NoteCategory;
   tags: string[];
   author: string;
@@ -13,6 +14,10 @@ export interface Note {
   image?: string;
   avatar?: string;
   own?: boolean;
+  statusLabel?: string;
+  cloudDraft?: boolean;
+  draftKey?: string;
+  editRecordNo?: string;
   remote?: boolean;
   imageUrl?: string;
   avatarUrl?: string;

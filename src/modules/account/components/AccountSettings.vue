@@ -131,7 +131,7 @@ const date = (value: string) => value.replace("T", " ").slice(0, 16);
         <template v-if="tab === 'profile'">
           <h2>个人资料</h2>
           <p class="member-settings__hint">
-            介绍一下自己，让每一次分享都带着你的名字。
+            介绍一下自己，让每一次笔记都带着你的名字。
           </p>
           <el-skeleton v-if="loading" :rows="4" animated />
           <div v-else-if="error" class="member-settings__error" role="alert">

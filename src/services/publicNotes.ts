@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { documentSchema } from "../domain/noteDocument";
 import type { Note } from "../domain/notes";
 const base = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const authorSchema = z
@@ -21,6 +22,7 @@ const detailSchema = z.object({
   recordNo: z.string(),
   title: z.string().nullable(),
   bodyText: z.string(),
+  document: documentSchema.nullish(),
   publishedAt: z.string().datetime({ offset: true }),
   author: authorSchema,
   images: z.array(z.object({ mediaNo: z.string(), contentUrl: z.string() })),
@@ -32,7 +34,7 @@ const detailSchema = z.object({
     }),
   ),
 });
-export class PublicShareError extends Error {
+export class PublicNoteError extends Error {
   constructor(
     message: string,
     public code: string,
@@ -46,6 +48,7 @@ export function publicMediaUrl(path: string | null): string | undefined {
   if (
     !path ||
     ![
+      "/api/v1/notes/media/public-content?",
       "/api/v1/shares/media/public-content?",
       "/api/v1/c/discovery/avatar?",
     ].some((prefix) => path.startsWith(prefix))
@@ -77,7 +80,7 @@ async function request<T>(
     })
     .safeParse(raw);
   if (!response.ok)
-    throw new PublicShareError(
+    throw new PublicNoteError(
       envelope.success
         ? envelope.data.errorMsg || "公开内容暂时无法读取"
         : "公开内容暂时无法读取",
@@ -85,20 +88,20 @@ async function request<T>(
       response.status,
     );
   if (!envelope.success)
-    throw new PublicShareError(
+    throw new PublicNoteError(
       "接口数据格式不匹配，请稍后重试",
       "INVALID_API_RESPONSE",
       response.status,
     );
   if (!envelope.data.success)
-    throw new PublicShareError(
+    throw new PublicNoteError(
       envelope.data.errorMsg || "读取失败",
       envelope.data.errorCode || "BUSINESS_ERROR",
       response.status,
     );
   const parsed = schema.safeParse(envelope.data.msg);
   if (!parsed.success)
-    throw new PublicShareError(
+    throw new PublicNoteError(
       "接口数据格式不匹配，请稍后重试",
       "INVALID_API_RESPONSE",
       response.status,
@@ -108,7 +111,7 @@ async function request<T>(
 function toNote(card: z.infer<typeof cardSchema>): Note {
   return {
     id: card.recordNo,
-    title: card.title?.trim() || card.summary.slice(0, 40) || "图片分享",
+    title: card.title?.trim() || card.summary.slice(0, 40) || "图片笔记",
     titleIsExcerpt: !card.title?.trim(),
     summary: card.summary,
     content: card.summary,
@@ -131,9 +134,9 @@ const engagementSchema = z.object({
   liked: z.boolean(),
   favorited: z.boolean(),
 });
-export type ShareEngagement = z.infer<typeof engagementSchema>;
+export type NoteEngagement = z.infer<typeof engagementSchema>;
 export type EngagementKind = "like" | "favorite";
-export const publicShares = {
+export const publicNotes = {
   /** 私有收藏与公开列表共用安全卡片模型，查询由后端按当前账号限定。 */
   async favorites(keyword: string, cursor?: string, signal?: AbortSignal) {
     const params = new URLSearchParams({ keyword, pageSize: "20" });
@@ -155,7 +158,7 @@ export const publicShares = {
         ),
       ),
     );
-    return Object.assign({}, ...states) as Record<string, ShareEngagement>;
+    return Object.assign({}, ...states) as Record<string, NoteEngagement>;
   },
   /** 显式设置而非翻转，重复请求不会重复计数。 */
   setEngagement(id: string, kind: EngagementKind, value: boolean) {
@@ -188,6 +191,7 @@ export const publicShares = {
     return {
       ...note,
       content: data.bodyText,
+      document: data.document ?? undefined,
       imageUrls: data.images
         .map((image) => publicMediaUrl(image.contentUrl))
         .filter((url): url is string => !!url),

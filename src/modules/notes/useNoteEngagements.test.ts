@@ -4,10 +4,10 @@ import { createPinia } from "pinia";
 import { defineComponent, ref } from "vue";
 import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
 import { useSession } from "../account/session";
-import { useShareEngagements } from "./useShareEngagements";
+import { useNoteEngagements } from "./useNoteEngagements";
 import { account } from "../../services/taskInteractions";
 import { legal } from "../../services/legal";
-import { publicShares } from "../../services/publicShares";
+import { publicNotes } from "../../services/publicNotes";
 vi.mock("../../services/taskInteractions", () => ({
   account: {
     me: vi.fn().mockRejectedValue(new Error("未登录")),
@@ -42,8 +42,8 @@ it("登录续做点赞并持久化，退出清除私人收藏与状态，匿名�
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   let session!: ReturnType<typeof useSession>;
-  let actions!: ReturnType<typeof useShareEngagements>;
-  vi.spyOn(publicShares, "engagements").mockImplementation(async () => ({
+  let actions!: ReturnType<typeof useNoteEngagements>;
+  vi.spyOn(publicNotes, "engagements").mockImplementation(async () => ({
     "SHARE-1": {
       ...initial,
       likeCount: session.user ? 1 : 0,
@@ -51,11 +51,11 @@ it("登录续做点赞并持久化，退出清除私人收藏与状态，匿名�
     },
   }));
   const write = vi
-    .spyOn(publicShares, "setEngagement")
+    .spyOn(publicNotes, "setEngagement")
     .mockResolvedValue({ ...initial, likeCount: 1, liked: true });
   const wrapper = mountHost(client, () => {
     session = useSession();
-    actions = useShareEngagements(ref(["SHARE-1"]));
+    actions = useNoteEngagements(ref(["SHARE-1"]));
   });
   try {
     await session.restore();
@@ -68,16 +68,16 @@ it("登录续做点赞并持久化，退出清除私人收藏与状态，匿名�
     await flushPromises();
     expect(write).toHaveBeenCalledWith("SHARE-1", "like", true);
     expect(actions.state.data.value?.["SHARE-1"]?.liked).toBe(true);
-    client.setQueryData(["public-shares", "USER-a", true, ""], {
+    client.setQueryData(["public-notes", "USER-a", true, ""], {
       secret: "private favorites",
     });
     await session.logout();
     await flushPromises();
     expect(
-      client.getQueryData(["public-shares", "USER-a", true, ""]),
+      client.getQueryData(["public-notes", "USER-a", true, ""]),
     ).toBeUndefined();
     expect(
-      client.getQueriesData({ queryKey: ["share-engagements", "USER-a"] }),
+      client.getQueriesData({ queryKey: ["note-engagements", "USER-a"] }),
     ).toHaveLength(0);
     expect(actions.state.data.value?.["SHARE-1"]?.liked).toBe(false);
   } finally {
@@ -98,12 +98,12 @@ it("切换账号后迟到的写入响应不能污染新账号，提交中不重�
     defaultOptions: { queries: { retry: false } },
   });
   let session!: ReturnType<typeof useSession>;
-  let actions!: ReturnType<typeof useShareEngagements>;
+  let actions!: ReturnType<typeof useNoteEngagements>;
   let complete!: (state: typeof initial) => void;
-  vi.spyOn(publicShares, "engagements").mockResolvedValue({
+  vi.spyOn(publicNotes, "engagements").mockResolvedValue({
     "SHARE-1": initial,
   });
-  const write = vi.spyOn(publicShares, "setEngagement").mockImplementation(
+  const write = vi.spyOn(publicNotes, "setEngagement").mockImplementation(
     () =>
       new Promise((resolve) => {
         complete = resolve;
@@ -111,7 +111,7 @@ it("切换账号后迟到的写入响应不能污染新账号，提交中不重�
   );
   const wrapper = mountHost(client, () => {
     session = useSession();
-    actions = useShareEngagements(ref(["SHARE-1"]));
+    actions = useNoteEngagements(ref(["SHARE-1"]));
   });
   try {
     await session.restore();
@@ -127,7 +127,7 @@ it("切换账号后迟到的写入响应不能污染新账号，提交中不重�
     await flushPromises();
     expect(actions.state.data.value?.["SHARE-1"]?.liked).toBe(false);
     expect(
-      client.getQueriesData({ queryKey: ["share-engagements", "USER-a"] }),
+      client.getQueriesData({ queryKey: ["note-engagements", "USER-a"] }),
     ).toHaveLength(0);
   } finally {
     wrapper.unmount();

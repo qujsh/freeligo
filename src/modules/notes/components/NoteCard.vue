@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { publicAssetUrl } from "../../../shared/lib/publicAssetUrl";
 import { computed, ref, watch } from "vue";
-import ShareActions from "./ShareActions.vue";
-import type { ShareEngagement } from "../../../services/publicShares";
+import NoteActions from "./NoteActions.vue";
+import type { NoteEngagement } from "../../../services/publicNotes";
 import type { Note } from "../noteModels";
 const props = defineProps<{
   note: Note;
-  engagement?: ShareEngagement;
+  engagement?: NoteEngagement;
   busy?: boolean;
   engagementFailed?: boolean;
 }>();
@@ -82,6 +82,7 @@ defineEmits<{ open: [note: Note]; like: []; retry: [] }>();
       </span>
       <strong v-if="hasImage" class="note-card__title">{{ note.title }}</strong>
     </button>
+    <span v-if="note.statusLabel" class="note-card__status">{{ note.statusLabel }}</span>
     <div class="note-card__body">
       <span class="note-card__author">
         <img
@@ -97,10 +98,10 @@ defineEmits<{ open: [note: Note]; like: []; retry: [] }>();
           note.author.slice(0, 1)
         }}</span>
         <span class="note-card__name">{{ note.author }}</span
-        ><span v-if="!note.remote" class="note-card__date">{{ note.date }}</span>
+        ><span v-if="!note.remote || note.own" class="note-card__date">{{ note.date }}</span>
       </span>
-      <ShareActions
-        v-if="note.remote"
+      <NoteActions
+        v-if="note.remote && !note.own"
         compact
         :state="engagement"
         :busy="busy"
@@ -112,6 +113,7 @@ defineEmits<{ open: [note: Note]; like: []; retry: [] }>();
   </article>
 </template>
 <style scoped>
+.note-card__status { padding:8px 12px 0; color:#777c85; font-size:12px; }
 .note-card {
   display: flex;
   flex-direction: column;

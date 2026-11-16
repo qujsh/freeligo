@@ -84,7 +84,7 @@ async function login() {
       <button type="button" role="tab" :aria-selected="mode === 'sms'" :disabled="busy || sending" @click="mode = 'sms'">验证码登录</button>
     </div>
     <label class="account-login__field"><span class="account-login__prefix">+86</span><input v-model="phone" aria-label="登录手机号" placeholder="输入手机号" maxlength="11" inputmode="tel" autocomplete="tel" :disabled="busy || sending" /></label>
-    <label v-if="mode === 'password'" class="account-login__field"><el-input v-model="password" aria-label="登录密码" placeholder="输入密码" type="password" show-password autocomplete="current-password" size="large" :disabled="busy" :style="{ '--el-input-border-radius': '12px', '--el-input-bg-color': 'transparent', '--el-input-border-color': 'transparent', '--el-input-hover-border-color': 'transparent', '--el-input-focus-border-color': 'transparent', '--el-input-height': '40px' }" /></label>
+    <label v-if="mode === 'password'" class="account-login__field"><el-input v-model="password" class="account-login__password" aria-label="登录密码" placeholder="输入密码" type="password" show-password autocomplete="current-password" size="large" :disabled="busy" :style="{ '--el-input-border-radius': '12px', '--el-input-bg-color': 'transparent', '--el-input-border-color': 'transparent', '--el-input-hover-border-color': 'transparent', '--el-input-focus-border-color': 'transparent', '--el-input-height': '40px' }" /></label>
     <label v-else class="account-login__field"><input v-model="code" aria-label="登录验证码" placeholder="输入验证码" maxlength="6" inputmode="numeric" autocomplete="one-time-code" :disabled="busy" /><button type="button" class="account-login__send" :disabled="sending || busy || remaining > 0" @click="send">{{ remaining ? `${remaining}秒后重发` : sending ? '发送中…' : '获取验证码' }}</button></label>
     <p v-if="notice" class="account-login__notice" role="status">{{ notice }}</p><p v-if="error" class="account-login__error" role="alert">{{ error }}</p>
     <div class="account-login__agreements">
@@ -105,6 +105,7 @@ async function login() {
 .account-login__tabs button { border:0; background:none; padding:0 0 8px; color:#888c94; cursor:pointer; font-family:inherit; font-size:14px; font-weight:500; line-height:1.5; border-bottom:2px solid transparent; }
 .account-login__tabs button[aria-selected=true] { color:#ee4e15; border-bottom-color:#ee4e15; }
 .account-login__field { display:flex; align-items:center; margin:0; height:44px; border:1px solid #e4e0dc; border-radius:13px; background:#ffffff70; overflow:hidden; min-width:0; }
+.account-login__field > .account-login__password { margin:0; width:100%; --el-input-text-color:#33363d; --el-input-placeholder-color:#a1a2a6; --el-font-size-base:15px; }
 .account-login__field:focus-within { border-color:#f5a785; box-shadow:0 0 0 2px #f9611810; }
 .account-login__field input { min-width:0; flex:1; width:100%; height:100%; padding:0 18px; border:0; outline:none; background:none; color:#33363d; font-family:inherit; font-size:15px; }
 .account-login__field input::placeholder { color:#a1a2a6; }
@@ -114,7 +115,10 @@ async function login() {
 .account-login button:disabled { opacity:.55; cursor:default; }
 .account-login__notice,.account-login__error { margin:0; font-size:13px; line-height:1.5; }
 .account-login__notice { color:#547762; }.account-login__error { color:#c63c2b; }
-.account-login__agreements { font-size:12px; color:#858991; line-height:1.7; }.account-login__agreements p { margin:0; }.account-login__agreements label { display:flex; gap:7px; align-items:flex-start; margin:0; }.account-login__agreements input { margin:4px 0 0; accent-color:#e95520; }.account-login__agreements a,.account-login__agreements button { color:#666c75; }.account-login__agreements button { border:0; background:none; cursor:pointer; }
+.account-login__agreements { font-size:12px; color:#858991; line-height:1.7; }.account-login__agreements p { margin:0; }.account-login__agreements label { display:flex; gap:7px; align-items:flex-start; margin:0; }.account-login__agreements input { margin:4px 0 0; accent-color:#e95520; }.account-login__agreements button { color:#666c75; border:0; background:none; cursor:pointer; }
+.account-login__agreements a { color:var(--el-color-primary,#e95520); text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:3px; cursor:pointer; }
+.account-login__agreements a:hover { color:#c74413; text-decoration-thickness:2px; }
+.account-login__agreements a:focus-visible { outline:2px solid var(--el-color-primary,#e95520); outline-offset:3px; border-radius:2px; }
 .account-login__hint { margin:0; text-align:center; color:#999ca2; font-size:12px; line-height:1.6; }
 @media(max-width:600px) { .account-login { padding:0 0 8px; }.account-login__intro h2 { font-size:22px; } }
 </style>

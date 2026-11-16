@@ -1,6 +1,6 @@
 > 2026-11-11 实施更新：已新增公开列表/搜索分页/详情与公开头像，前端已接入；展示公开昵称与头像，移除分类，写笔记与我的笔记保持本机体验。以下初期分析保留供追溯，实际契约以README及后端 docs/api.md 为准。
 
-> 2026-11-11 目录改造进展：后端已新增 consumer.discovery，迁入既有匿名详情及图片读取；B端专属入口已归 management。本文的全站列表、搜索分页及新URL仍待实现，当前前端尚未接入真实分享。
+> 2026-11-11 目录改造进展：后端已新增 consumer.discovery，迁入既有匿名详情及图片读取；B端专属入口已归 management。本文的全站列表、搜索分页及新URL仍待实现，当前前端尚未接入真实笔记。
 
 # C 端发现模块接入分析
 
@@ -8,38 +8,38 @@
 
 ## 当前情况
 
-C 端发现页仍从 sampleNotes 和本机记录组合内容；后端 shares 提供当前用户分享管理、审核及匿名公开详情/媒体入口，没有全站公开发现列表。已有 discovery 包主要负责后台分类配置。
+C 端发现页仍从 sampleNotes 和本机记录组合内容；后端 notes 提供当前用户笔记管理、审核及匿名公开详情/媒体入口，没有全站公开发现列表。已有 discovery 包主要负责后台分类配置。
 
-因此，不在 ShareController 里继续堆叠 C 端列表，也不把 `/shares/records?visibility=PUBLIC` 当成全站发现。该接口按当前用户查询，语义与权限不匹配。
+因此，不在 NoteController 里继续堆叠 C 端列表，也不把 `/notes/records?visibility=PUBLIC` 当成全站发现。该接口按当前用户查询，语义与权限不匹配。
 
 ## 目标分工
 
 | 归属 | 职责 |
 | --- | --- |
-| B 端分享管理 | 创建、编辑副本、私密保存、公开申请、审核状态及本人管理 |
-| shares 共用业务能力 | 正式记录、公开资格、审核、正文和媒体归属；提供公开查询应用契约 |
+| B 端笔记管理 | 创建、编辑副本、私密保存、公开申请、审核状态及本人管理 |
+| notes 共用业务能力 | 正式记录、公开资格、审核、正文和媒体归属；提供公开查询应用契约 |
 | consumer.discovery | C 端公开列表、搜索分页、详情与媒体用例编排，输出独立白名单 DTO |
 | C 端 discovery 页面 | URL 查询状态、Vue Query 列表与详情、卡片及加载/空/错误状态 |
 
-C 端读取同一份正式分享数据，不复制成另一张“笔记表”，也不依赖后台权限菜单。后续如增加收藏、推荐、浏览记录，再按真实需求建立独立数据模型。
+C 端读取同一份正式笔记数据，不复制成另一张“笔记表”，也不依赖后台权限菜单。后续如增加收藏、推荐、浏览记录，再按真实需求建立独立数据模型。
 
 ## 建议首轮接口（待实现）
 
 前缀 `/api/v1/c/discovery`：
 
-- `GET /records?keyword=&pageSize=&cursor=`：只返回当前可公开的分享摘要，有界游标分页。
+- `GET /records?keyword=&pageSize=&cursor=`：只返回当前可公开的笔记摘要，有界游标分页。
 - `GET /record?recordNo=`：公开正式内容详情。
 - `GET /media/content?recordNo=&mediaNo=`：校验公开资格及正式图片关联，再返回短期访问地址；也可先复用既有公开媒体入口，保持同一资格规则。
 
 这是建议契约，不是已可调用地址。列表初期按 publishedAt 与 recordNo 稳定倒序；首轮不做推荐算法。新接口按单个路径配置匿名只读权限；C 端私有和写入用例未来另行授权。
 
-卡片候选字段为 recordNo、可空 title、summary、可空 coverUrl、publishedAt；响应含 items、nextCursor、hasMore。具体空值与时间格式应对齐实际后端类型。若允许无标题分享，前端可使用真实正文摘要展示，不编造标题。详情继续支持白名单 document、bodyText、images 和可公开 references。
+卡片候选字段为 recordNo、可空 title、summary、可空 coverUrl、publishedAt；响应含 items、nextCursor、hasMore。具体空值与时间格式应对齐实际后端类型。若允许无标题笔记，前端可使用真实正文摘要展示，不编造标题。详情继续支持白名单 document、bodyText、images 和可公开 references。
 
 作者昵称和头像需要明确公开范围及查询契约；当前公开详情未包含作者资料。没有可靠字段时不展示模拟作者。当前三种固定分类与私有标签不能直接映射为公开分类；首轮先提供“全部”和搜索，分类需确定归属关系后增加接口。发生时间 occurredAt 与公开发布时间 publishedAt 不混用，建议卡片显示公开时间。
 
 ## 前端接入
 
-新增 services/publicShares.ts：统一响应校验、稳定错误转换及 DTO 映射；新增 usePublicNotes composable，通过 Vue Query 管理远端缓存与分页，传递 AbortSignal。页面只组合布局和用户动作，查询键含全部筛选条件。
+新增 services/publicNotes.ts：统一响应校验、稳定错误转换及 DTO 映射；新增 usePublicNotes composable，通过 Vue Query 管理远端缓存与分页，传递 AbortSignal。页面只组合布局和用户动作，查询键含全部筛选条件。
 
 NoteCard 接收真实媒体 URL 与可空作者信息，替换目前通过素材名拼图片的假设。发现页不再把本机笔记拼入公开流；本机草稿与“我的笔记”保留独立含义。API 模式失败明确显示错误，显式 mock 模式才使用演示内容。
 

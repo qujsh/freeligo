@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import NoteDocument from "./NoteDocument.vue";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useNoteGallery } from "../useNoteGallery";
 import type { Note } from "../noteModels";
@@ -11,7 +12,7 @@ const { track, active, go, scrolled, pointerDown, pointerMove, finish, reset } =
   useNoteGallery(() => props.images.length);
 const avatarFailed = ref(false);
 const label = computed(() =>
-  props.note.own ? "本机笔记" : props.note.remote ? "公开分享" : "演示笔记",
+  props.note.own ? (props.note.remote ? props.note.statusLabel || "本人笔记" : "本机笔记") : props.note.remote ? "公开笔记" : "演示笔记",
 );
 watch(
   () => props.note.id,
@@ -51,7 +52,7 @@ watch(
           v-for="(url, index) in images"
           :key="`${note.id}-${index}`"
           :src="url"
-          :alt="`分享配图 ${index + 1}`"
+          :alt="`笔记配图 ${index + 1}`"
           :draggable="false"
         />
       </div>
@@ -111,15 +112,16 @@ watch(
           </div>
         </div>
         <h1 v-if="!note.titleIsExcerpt">{{ note.title }}</h1>
-        <div class="notes-reader__content">{{ note.content }}</div>
+        <NoteDocument v-if="note.document" :document="note.document" />
+        <div v-else class="notes-reader__content">{{ note.content }}</div>
         <div v-if="note.references?.length" class="notes-reader__references">
-          <h3>关联分享</h3>
+          <h3>关联笔记</h3>
           <button
             v-for="reference in note.references"
             :key="reference.recordNo"
             @click="$emit('reference', reference.recordNo)"
           >
-            {{ reference.title || "查看关联分享" }}
+            {{ reference.title || "查看关联笔记" }}
           </button>
         </div>
         <div v-if="note.tags.length" class="notes-reader__tags">
