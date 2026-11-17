@@ -4,7 +4,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/vue-query";
-import { noteEditor } from "../../services/noteEditor";
 import type { Note } from "../../domain/notes";
 import { ownedNotes } from "../../services/ownedNotes";
 import { useSession } from "../account/session";
@@ -37,7 +36,7 @@ export function useOwnedNotes(
     queryFn: async ({ pageParam, signal }) => {
       if (!drafts.value)
         return ownedNotes.list(keyword.value, pageParam, signal);
-      const page = await noteEditor.drafts(keyword.value, pageParam, signal);
+      const page = await ownedNotes.drafts(keyword.value, pageParam, signal);
       return {
         ...page,
         items: page.items.map(
@@ -84,8 +83,9 @@ export function useOwnedNotes(
       viewer.value,
       "detail",
       recordNo.value,
+      drafts.value,
     ]),
-    queryFn: ({ signal }) => ownedNotes.detail(recordNo.value, signal),
+    queryFn: ({ signal }) => drafts.value ? ownedNotes.draftDetail(recordNo.value, signal) : ownedNotes.detail(recordNo.value, signal),
     enabled: computed(() => !!recordNo.value && !!session.user),
     staleTime: 0,
     gcTime: 0,

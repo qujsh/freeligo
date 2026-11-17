@@ -19,6 +19,8 @@ export interface Note {
   draftKey?: string;
   editRecordNo?: string;
   remote?: boolean;
+  /** 本人正式公开内容可以复用发现页互动；私密和草稿不调用公开互动接口。 */
+  engagementAvailable?: boolean;
   imageUrl?: string;
   avatarUrl?: string;
   imageUrls?: string[];

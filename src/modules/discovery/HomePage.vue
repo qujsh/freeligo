@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { publicAssetUrl } from "../../shared/lib/publicAssetUrl";
-import { computed, defineAsyncComponent, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Search, ArrowLeft, PenLine } from "lucide-vue-next";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { Search, ArrowLeft, ArrowUpRight, PenLine } from "lucide-vue-next";
+import { useQuery } from "@tanstack/vue-query";
 
-import { useBrowserDrafts } from "../notes/editor/useBrowserDrafts";
 import { ownedNotes } from "../../services/ownedNotes";
-import { noteEditor, type NoteSaved } from "../../services/noteEditor";
+import { managementNoteUrl } from "../notes/managementNavigation";
 import { ElMessage } from "element-plus";
 import { useSession } from "../account/session";
 import { useNoteEngagements } from "../notes/useNoteEngagements";
+import { useNoteComments } from "../notes/useNoteComments";
+import NoteComments from "../notes/components/NoteComments.vue";
+import NoteCommentComposer from "../notes/components/NoteCommentComposer.vue";
+import type { NoteComment } from "../../services/publicNotes";
 import NoteActions from "../notes/components/NoteActions.vue";
 import { useAccountProfile } from "../account/useAccountProfile";
 import ProfileOverview from "../account/components/ProfileOverview.vue";
@@ -26,10 +29,9 @@ import { useOwnedNotes } from "../notes/useOwnedNotes";
 import { usePublicNotes } from "../notes/usePublicNotes";
 import { useNoteMasonry } from "../notes/useNoteMasonry";
 import type { Note } from "../notes/noteModels";
-const NoteComposer=defineAsyncComponent(()=>import("../notes/editor/NoteComposer.vue"));
 const route = useRoute(),
   router = useRouter();
-const { notes, draft, storageError, save } = useLocalNotes();
+const { notes: localNotes } = useLocalNotes();
 const search = ref(String(route.query.q ?? ""));
 const noteGrid = ref<HTMLElement | null>(null);
 useNoteMasonry(noteGrid);
@@ -40,10 +42,6 @@ watch(
   },
 );
 const session = useSession();
-const browserDrafts = useBrowserDrafts();
-const localNotes = computed(() => [...browserDrafts.notes.value, ...notes.value]);
-const queryClient = useQueryClient();
-const composerBusy = ref(false);
 const { profile, save: saveProfile, viewer, avatar } = useAccountProfile();
 const editingProfile = ref(false);
 watch(viewer, () => {
@@ -53,15 +51,26 @@ watch(viewer, () => {
 const isSettings = computed(() => route.query.view === "settings");
 const isFavorites = computed(() => route.query.view === "favorites");
 const isMine = computed(() => route.query.view === "mine");
-const isLocal = computed(() => isMine.value && (isMock || route.query.source === "local"));
 const isCloudDrafts = computed(() => isMine.value && route.query.source === "drafts");
-const isRemoteMine = computed(() => isMine.value && !isLocal.value);
+const isRemoteMine = computed(() => isMine.value && !isMock);
 const isGrowth = computed(() => route.query.view === "growth");
 const isMock = import.meta.env.VITE_DATA_SOURCE === "mock";
+// 旧备份链接归并到云端草稿，不再读取或展示浏览器备份。
+watch(() => route.query.source, source => {
+  if (!isMock && source === "local") void router.replace({ query: { ...route.query, source: "drafts", note: undefined } });
+}, { immediate: true });
 const summary=useQuery({queryKey:computed(()=>["owned-notes",viewer.value,"summary"]),queryFn:({signal})=>ownedNotes.list("",undefined,signal),enabled:computed(()=>!!session.user&&!isMock),staleTime:30000,retry:false});
+// 标签数量只统计后端草稿，保持与搜索结果和浏览器恢复内容分离。
+const draftSummary = useQuery({
+  queryKey: computed(() => ["owned-notes", viewer.value, "draft-summary"]),
+  queryFn: ({ signal }) => ownedNotes.drafts("", undefined, signal),
+  enabled: computed(() => isMine.value && !!session.user && !isMock),
+  staleTime: 30000,
+  retry: false,
+});
 const keyword = computed(() => String(route.query.q ?? "").trim());
 const localSelected = computed(() =>
-  [...localNotes.value, ...(isMock || isGrowth.value ? sampleNotes : [])].find(
+  [...(isMock ? localNotes.value : []), ...(isMock || isGrowth.value ? sampleNotes : [])].find(
     (note) => note.id === route.query.note,
   ),
 );
@@ -94,18 +103,38 @@ const visible = computed(() => {
         .includes(keyword.value.toLowerCase()),
   );
 });
-const selected = computed(
-  () =>
-    localSelected.value ??
-    ((!isRemoteMine.value || !!session.user) && !detail.value.isError.value && !detail.value.isFetching.value
-      ? detail.value.data.value
-      : undefined),
-);
+// 刷新期间隐藏旧详情，但保留同一公开笔记的评论输入；失败或失去本人权限时立即失效。
+const availableNote = computed(() => localSelected.value ??
+  ((!isRemoteMine.value || !!session.user) && !detail.value.isError.value ? detail.value.data.value : undefined));
+const selected = computed(() => {
+  const note = localSelected.value ?? (!detail.value.isFetching.value ? availableNote.value : undefined);
+  if (!note?.own || !session.user) return note;
+  // 本人接口不重复返回作者信息，阅读时使用当前账号的真实资料，避免修改查询缓存。
+  return {
+    ...note,
+    author: profile.data.value?.nickname || session.user.name,
+    avatarUrl: avatar.value || note.avatarUrl,
+  };
+});
+function canEngage(note: Note) {
+  return note.remote && (!note.own || note.engagementAvailable);
+}
+const discussion = useNoteComments(computed(() => availableNote.value && canEngage(availableNote.value) ? availableNote.value.id : ""));
+const commentsPanel = ref<InstanceType<typeof NoteComments> | null>(null);
+const commentComposer = ref<InstanceType<typeof NoteCommentComposer> | null>(null);
+function replyComment(comment: NoteComment) {
+  discussion.replyTo.value = comment;
+  commentComposer.value?.focus();
+}
+function showComments() {
+  commentsPanel.value?.scrollIntoView();
+  commentComposer.value?.focus();
+}
 const engagementIds = computed(() =>
   [
     ...new Set([
-      ...visible.value.filter((note) => note.remote && !note.own).map((note) => note.id),
-      ...(selected.value?.remote && !selected.value.own ? [selected.value.id] : []),
+      ...visible.value.filter(canEngage).map((note) => note.id),
+      ...(selected.value && canEngage(selected.value) ? [selected.value.id] : []),
     ]),
   ].sort(),
 );
@@ -160,56 +189,39 @@ const readerImages = computed(() => {
 const reading = computed(() => !!route.query.note);
 const feedLoading = computed(
   () =>
-    !isLocal.value &&
     !isMock &&
     (!(isFavorites.value || isRemoteMine.value) || !!session.user) &&
     list.value.isPending.value,
 );
 const feedError = computed(() =>
-  !isLocal.value && !isMock && !list.value.isFetchNextPageError.value
+  !isMock && !list.value.isFetchNextPageError.value
     ? list.value.error.value
     : null,
 );
-const composing = computed(() => route.query.compose === "1");
 function query(values: Record<string, string | undefined>) {
   void router.push({ path: "/", query: { ...route.query, ...values } });
 }
 function open(note: Note) {
-  if(!isMock && (note.cloudDraft || (note.own && !note.remote))) { startCompose(note); return; }
   query({ note: note.id });
 }
-/** 未登录先完成真实登录；本机历史内容只有用户显式保存才上传。 */
-function startCompose(note?: Note) {
-  if(isMock){query({compose:"1"});return;}
-  session.requireLogin(() => query({compose:"1",edit:note?.remote ? note.id : note?.editRecordNo,resume:note?.draftKey,legacy:note && !note.remote && !note.draftKey ? note.id : undefined,note:undefined}));
+/** 管理端通过共享后端Cookie恢复真实会话，不在跳转链接中传递身份凭证。 */
+function openManagement(view?: "trash") {
+  try {
+    window.open(managementNoteUrl(view), "_blank", "noopener,noreferrer");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "管理端地址尚未配置");
+  }
 }
-const composerSeed=computed(()=>notes.value.find(note=>note.id===route.query.legacy));
-function closeComposer(){if(composerBusy.value)return;query({compose:undefined,edit:undefined,resume:undefined,legacy:undefined});}
-/** 保存结果使用后端实际状态；公开排队不显示“发布成功”。 */
-function noteSaved(value:NoteSaved){
-  composerBusy.value=false;
-  query({compose:undefined,edit:undefined,resume:undefined,legacy:undefined,note:undefined,q:undefined,view:"mine",source:value.status==="DRAFT" || value.draftVersion!==null ? "drafts":undefined});
-  ElMessage.success(value.status==="DRAFT" || value.draftVersion!==null ? "已保存云端草稿" : value.visibility==="PUBLIC" ? "笔记已保存并公开" : ["queued","running"].includes(value.reviewStatus || "") ? "已保存，正在审核，暂仅自己可见" : "笔记已私密保存");
-}
-const reviewRetry=useMutation({mutationFn:(no:string)=>noteEditor.retry(no),onSuccess:()=>{void queryClient.invalidateQueries({queryKey:["owned-notes",viewer.value]});ElMessage.success("已重新提交审核");},onError:(failure:Error)=>ElMessage.error(failure.message)});
+function writeNote() { openManagement(); }
+function openTrash() { openManagement("trash"); }
+// 旧创作链接只清除编辑参数，保留当前页面；不再挂载C端编辑器或自动写入。
+watch(() => [route.query.compose, route.query.edit, route.query.resume, route.query.legacy], values => {
+  if (values.some(value => value !== undefined)) {
+    void router.replace({ query: { ...route.query, compose: undefined, edit: undefined, resume: undefined, legacy: undefined } });
+  }
+}, { immediate: true });
 function submitSearch() {
   query({ q: search.value.trim() || undefined });
-}
-function saveNote() {
-  if (!draft.value.title.trim() || !draft.value.content.trim()) {
-    ElMessage.warning("先写一个标题，再记录一点内容吧");
-    return;
-  }
-  if (save()) {
-    query({
-      compose: undefined,
-      view: "mine",
-      source: "local",
-      q: undefined,
-      category: undefined,
-    });
-    ElMessage.success("已保存到本机笔记");
-  } else ElMessage.error("本机存储不可用，请保留并复制你的内容");
 }
 </script>
 <template>
@@ -228,7 +240,7 @@ function saveNote() {
       @login="session.requireLogin(() => {})"
       @logout="signout"
       @mine="query({ view: 'mine', source: undefined, note: undefined, q: undefined, category: undefined })"
-      @compose="startCompose()"
+      @compose="writeNote"
     />
     <main
       class="notes-main"
@@ -293,26 +305,19 @@ function saveNote() {
           @favorites="showFavorites"
         />
         <div v-if="isMine" class="member-content-bar">
-          <div class="member-note-sources" aria-label="笔记来源">
-            <button v-if="!isMock" :class="{ active: !isLocal && !isCloudDrafts }" @click="query({ source: undefined, q: undefined, note: undefined })">全部笔记</button>
-            <button v-if="!isMock" :class="{ active: isCloudDrafts }" @click="query({ source: 'drafts', q: undefined, note: undefined })">云端草稿</button>
-            <button :class="{ active: isLocal }" @click="query({ source: 'local', q: undefined, note: undefined })">本机草稿 <small>{{ localNotes.length }}</small></button>
+          <div class="member-note-sources" aria-label="笔记列表">
+            <button :class="{ active: !isCloudDrafts || isMock }" @click="query({ source: undefined, q: undefined, note: undefined })">全部笔记</button>
+            <button v-if="!isMock" :class="{ active: isCloudDrafts }" @click="query({ source: 'drafts', q: undefined, note: undefined })">草稿<small v-if="session.user && draftSummary.data.value && !draftSummary.isError.value">{{ draftSummary.data.value.total }}</small></button>
+            <button v-if="!isMock" title="在新窗口打开管理端回收站" @click="openTrash">回收站 <ArrowUpRight :size="13" aria-hidden="true" /></button>
           </div>
-          <span v-if="isLocal">共 {{ localNotes.length }} 篇草稿</span>
-          <span v-else-if="session.user && own.total.value !== undefined">共 {{ own.total.value }} 篇{{ isCloudDrafts ? "草稿" : "笔记" }}</span>
+          <span v-if="session.user && own.total.value !== undefined" class="member-count">共 {{ own.total.value }} 篇{{ isCloudDrafts ? "草稿" : "笔记" }}</span>
+          <form v-if="isRemoteMine && session.user" class="notes-search member-search" role="search" @submit.prevent="submitSearch">
+            <Search :size="18" /><input v-model="search" :aria-label="isCloudDrafts ? '搜索草稿' : '搜索我的笔记'" :placeholder="isCloudDrafts ? '搜索草稿' : '搜索我的笔记'" type="search" />
+            <button class="notes-primary" type="submit">搜索</button>
+          </form>
         </div>
-        <form
-          v-if="(isFavorites || isRemoteMine) && session.user"
-          class="notes-search notes-favorites-search"
-          role="search"
-          @submit.prevent="submitSearch"
-        >
-          <Search :size="21" /><input
-            v-model="search"
-            :aria-label="isRemoteMine ? '搜索我的笔记' : '搜索收藏笔记'"
-            :placeholder="isRemoteMine ? '搜索我的笔记' : '搜索收藏笔记'"
-            type="search"
-          /><button class="notes-primary" type="submit">搜索</button>
+        <form v-if="isFavorites && session.user" class="notes-search notes-favorites-search" role="search" @submit.prevent="submitSearch">
+          <Search :size="21" /><input v-model="search" aria-label="搜索收藏笔记" placeholder="搜索收藏笔记" type="search" /><button class="notes-primary" type="submit">搜索</button>
         </form>
         <section aria-labelledby="notes-section-title">
           <div v-if="!isMine && !isFavorites" class="notes-toolbar">
@@ -361,9 +366,9 @@ function saveNote() {
             <h3>
               {{
                 isRemoteMine
-                  ? (keyword ? "未找到相关笔记" : "还没有保存的笔记")
+                  ? (keyword ? "未找到相关笔记" : isCloudDrafts ? "还没有草稿" : "还没有保存的笔记")
                   : isMine
-                  ? "还没有本机草稿"
+                  ? "没有本机备份"
                   : isFavorites
                     ? "还没有相关收藏"
                     : "还没有找到相关笔记"
@@ -372,7 +377,7 @@ function saveNote() {
             <p>
               {{
                 isRemoteMine
-                  ? "这里只展示当前账号已保存的笔记；本机笔记可切换查看。"
+                  ? (isCloudDrafts ? "前往管理端写笔记或管理草稿。" : "前往管理端写下第一篇笔记。")
                   : isMine
                   ? "一张照片、一点经验，都值得记录。"
                   : isFavorites
@@ -384,9 +389,9 @@ function saveNote() {
               class="notes-primary"
               @click="
                 isRemoteMine
-                  ? query({ q: undefined, source: keyword ? undefined : 'local' })
+                  ? (keyword ? query({ q: undefined }) : writeNote())
                   : isMine
-                  ? startCompose()
+                  ? writeNote()
                   : isFavorites
                     ? router.push('/')
                     : query({ q: undefined, category: undefined })
@@ -394,7 +399,7 @@ function saveNote() {
             >
               {{
                 isRemoteMine
-                  ? (keyword ? "清除搜索" : "查看本机草稿")
+                  ? (keyword ? "清除搜索" : "写一篇笔记")
                   : isMine
                   ? "写第一篇笔记"
                   : isFavorites
@@ -404,7 +409,7 @@ function saveNote() {
             </button>
           </div>
           <div
-            v-if="!isLocal && !isMock && visible.length"
+            v-if="!isMock && visible.length"
             class="notes-pagination"
           >
             <p v-if="list.isFetchNextPageError.value" role="alert">
@@ -421,7 +426,7 @@ function saveNote() {
               }}
 </button
             ><span v-else
-              >已经看到全部{{ isRemoteMine ? "本人笔记" : isFavorites ? "收藏" : "公开笔记" }}</span
+              >{{ isCloudDrafts ? "已显示全部草稿" : isRemoteMine ? "已显示全部笔记" : isFavorites ? "已显示全部收藏" : "已经看到全部公开笔记" }}</span
             >
           </div>
         </section>
@@ -452,21 +457,17 @@ function saveNote() {
           这里展示参考笔记故事，个人成长数据尚未接入。
         </p>
       </section>
-      <p v-if="isMine" class="member-local-hint">
-        {{ isLocal ? "本机草稿仅保存在当前浏览器。旧版内容已保留，打开后可继续编辑并由你决定是否保存到云端。" : "全部笔记包含本人私密与待审核记录；云端草稿包含新草稿和编辑副本。申请公开需审核通过。" }}
-      </p>
       <footer class="notes-footer">
-        生活里的小发现，值得被看见。<span
-          >{{ isMock ? "当前为演示模式" : "发现内容来自审核通过的公开笔记" }} ·
-          笔记支持私密保存与申请公开</span
-        >
-      <span><router-link to="/legal/terms" target="_blank">用户协议</router-link> · <router-link to="/legal/privacy" target="_blank">隐私政策</router-link></span></footer>
+        生活里的小发现，值得被看见。
+        <span v-if="isMock">当前为演示模式</span>
+        <span><router-link to="/legal/terms" target="_blank">用户协议</router-link> · <router-link to="/legal/privacy" target="_blank">隐私政策</router-link></span>
+      </footer>
     </main>
     <el-dialog
       :model-value="reading"
       class="notes-reader-dialog"
       body-class="notes-reader-dialog-body"
-      :width="readerImages.length ? 'min(1120px, 94vw)' : 'min(740px, 94vw)'"
+      width="min(1120px, 94vw)"
       top="6vh"
       title="笔记"
       :show-close="false"
@@ -494,13 +495,41 @@ function saveNote() {
         :images="readerImages"
         @reference="query({ note: $event })"
       >
-        <template v-if="selected.remote" #actions>
-          <div v-if="selected.own" class="member-note-actions"><button class="member-outline" @click="startCompose(selected)">编辑笔记</button><button v-if="selected.statusLabel?.startsWith('审核失败')" class="member-outline" :disabled="reviewRetry.isPending.value" @click="reviewRetry.mutate(selected.id)">重试审核</button></div>
+        <template v-if="canEngage(selected)" #comments>
+          <NoteComments
+            ref="commentsPanel"
+            :items="discussion.items.value"
+            :total="discussion.total.value"
+            :loading="discussion.list.isPending.value"
+            :error="discussion.list.isFetchNextPageError.value ? undefined : discussion.list.error.value?.message"
+            :more="!!discussion.list.hasNextPage.value"
+            :loading-more="discussion.list.isFetchingNextPage.value"
+            :more-error="discussion.list.isFetchNextPageError.value ? '更多评论加载失败，请重试' : undefined"
+            :deleting="discussion.remove.isPending.value"
+            @reply="replyComment"
+            @remove="discussion.deleteComment"
+            @retry="discussion.list.refetch()"
+            @more="discussion.list.fetchNextPage()"
+          />
+        </template>
+        <template v-if="canEngage(selected)" #actions>
+          <NoteCommentComposer
+            ref="commentComposer"
+            v-model="discussion.content.value"
+            :reply-name="discussion.replyTo.value ? discussion.replyTo.value.author.nickname || '用户' : undefined"
+            :busy="discussion.post.isPending.value"
+            :logged-in="!!session.user"
+            :error="discussion.post.error.value?.message"
+            @submit="discussion.submit"
+            @cancel-reply="discussion.replyTo.value = null"
+          />
           <NoteActions
-            v-else
+            show-comments
+            :comment-count="discussion.total.value"
             :state="engagementState.data.value?.[selected.id]"
             :busy="engagementBusy"
             :failed="engagementState.isError.value"
+            @comment="showComments"
             @like="changeEngagement(selected.id, 'like')"
             @favorite="changeEngagement(selected.id, 'favorite')"
             @retry="engagementState.refetch()"
@@ -527,47 +556,20 @@ function saveNote() {
         @save="submitProfile"
     />
 </el-dialog>
-    <el-dialog v-if="!isMock" :model-value="composing" width="min(860px, 94vw)" top="5vh" :title="route.query.edit ? '编辑笔记' : '写笔记'" destroy-on-close :close-on-click-modal="!composerBusy" :close-on-press-escape="!composerBusy" :show-close="!composerBusy" @close="closeComposer">
-      <NoteComposer v-if="composing && session.user" :key="`${viewer}:${route.query.edit || ''}:${route.query.resume || ''}:${route.query.legacy || ''}`" :record-no="route.query.edit ? String(route.query.edit) : undefined" :resume="route.query.resume ? String(route.query.resume) : undefined" :seed="composerSeed" @saved="noteSaved" @close="closeComposer" @busy="composerBusy=$event" />
-      <div v-else-if="composing" class="notes-empty"><h3>登录后写笔记</h3><button class="notes-primary" @click="session.requireLogin(() => {})">登录并继续</button></div>
-    </el-dialog>
-    <el-dialog
-      v-if="isMock"
-      :model-value="composing"
-      width="min(700px, 94vw)"
-      title="写下今天的想法"
-      @close="query({ compose: undefined })"
-    >
-      <form class="notes-editor" @submit.prevent="saveNote">
-        <p>
-          不必是完整的故事，一点发现也很好。这里是本机体验，草稿和笔记不会上传。
-        </p>
-        <label for="note-title">标题</label
-        ><el-input
-          id="note-title"
-          v-model="draft.title"
-          placeholder="给这篇笔记起个名字"
-          maxlength="60"
-          show-word-limit
-        /><label for="note-content">正文</label
-        ><el-input
-          id="note-content"
-          v-model="draft.content"
-          type="textarea"
-          :rows="9"
-          maxlength="10000"
-          show-word-limit
-          placeholder="今天做了什么，又有了哪些想法？"
-        />
-        <p v-if="storageError" role="alert">
-          本机存储读取或保存失败，请复制保留你的内容。
-        </p>
-        <div class="notes-editor__actions">
-          <span>仅保存到本机，不会公开发布</span
-          ><button class="notes-primary" type="submit">保存笔记</button>
-        </div>
-      </form>
-    </el-dialog>
   </div>
 </template>
 <style src="../notes/notesPage.css"></style>
+
+<style scoped>
+.member-content-bar { justify-content:flex-start; gap:16px; padding:22px 0; flex-wrap:wrap; }
+.member-note-sources button { display:inline-flex; align-items:center; gap:4px; }
+.member-count { font-size:12px; white-space:nowrap; }
+.member-search { margin:0 0 0 auto; width:300px; height:38px; }
+.member-search input { font-size:13px; }
+.member-search .notes-primary { min-width:60px; padding:0 16px; height:30px; font-size:13px; }
+@media(max-width:650px) {
+  .member-content-bar { gap:12px; padding:18px 0; }
+  .member-count { margin-left:auto; }
+  .member-search { width:100%; margin:0; }
+}
+</style>

@@ -39,9 +39,11 @@ it("多图按钮切换、边界和切换笔记后的页码重置", async () => {
   expect(track.scrollLeft).toBe(0);
   wrapper.unmount();
 });
-it("纯文字不展示画廊，正文转义，关联笔记按编号打开", async () => {
+it("纯文字展示封面与完整正文，安全转义，关联笔记按编号打开", async () => {
   const wrapper = mount(NoteReader, { props: { note, images: [] } });
-  expect(wrapper.find(".note-detail__gallery").exists()).toBe(false);
+  expect(wrapper.get(".note-detail__text-cover").text()).toContain(note.content);
+  expect(wrapper.find(".note-detail__text-cover b").exists()).toBe(false);
+  expect(wrapper.find(".note-detail__track").exists()).toBe(false);
   expect(wrapper.get(".notes-reader__content").text()).toBe(note.content);
   expect(wrapper.find(".notes-reader__content b").exists()).toBe(false);
   await wrapper.get(".notes-reader__references button").trigger("click");

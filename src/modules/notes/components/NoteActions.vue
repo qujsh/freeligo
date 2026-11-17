@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { Heart, Star, RefreshCw } from "lucide-vue-next";
+import { Heart, Star, RefreshCw, MessageCircle } from "lucide-vue-next";
 import type { NoteEngagement } from "../../../services/publicNotes";
 defineProps<{
   state?: NoteEngagement;
   busy?: boolean;
   compact?: boolean;
   failed?: boolean;
+  showComments?: boolean;
+  commentCount?: number;
 }>();
-defineEmits<{ like: []; favorite: []; retry: [] }>();
+defineEmits<{ like: []; favorite: []; retry: []; comment: [] }>();
 </script>
 <template>
   <div class="note-actions" :class="{ 'note-actions--compact': compact }">
@@ -48,6 +50,7 @@ defineEmits<{ like: []; favorite: []; retry: [] }>();
         /><span>{{ state ? state.favoriteCount || "收藏" : "…" }}</span>
       </button>
     </template>
+    <button v-if="showComments && !compact" type="button" aria-label="查看评论" @click.stop="$emit('comment')"><MessageCircle :size="22" /><span>{{ commentCount === undefined ? '评论' : commentCount || '评论' }}</span></button>
   </div>
 </template>
 <style scoped>

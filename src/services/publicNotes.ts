@@ -51,6 +51,7 @@ export function publicMediaUrl(path: string | null): string | undefined {
       "/api/v1/notes/media/public-content?",
       "/api/v1/shares/media/public-content?",
       "/api/v1/c/discovery/avatar?",
+      "/api/v1/c/discovery/comments/avatar?",
     ].some((prefix) => path.startsWith(prefix))
   )
     return undefined;
@@ -61,7 +62,7 @@ async function request<T>(
   path: string,
   schema: z.ZodType<T>,
   signal?: AbortSignal,
-  body?: { value: boolean },
+  body?: unknown,
 ): Promise<T> {
   const response = await fetch(`${base}/api/v1/c/discovery/${path}`, {
     signal,
@@ -136,6 +137,31 @@ const engagementSchema = z.object({
 });
 export type NoteEngagement = z.infer<typeof engagementSchema>;
 export type EngagementKind = "like" | "favorite";
+const commentSchema = z.object({
+  commentNo: z.string(), content: z.string(), createdAt: z.string().datetime({ offset: true }),
+  author: z.object({ nickname: z.string(), avatarUrl: z.string().nullable() }),
+  replyTo: z.object({ commentNo: z.string(), nickname: z.string().nullable(), unavailable: z.boolean() }).nullable(),
+  own: z.boolean(),
+});
+export type NoteComment = z.infer<typeof commentSchema>;
+export const noteComments = {
+  /** 公开评论分页，身份只由Cookie决定；取消旧请求不影响其他笔记。 */
+  async list(recordNo: string, cursor?: string, signal?: AbortSignal) {
+    const params = new URLSearchParams({ recordNo, pageSize: "20" });
+    if (cursor) params.set("cursor", cursor);
+    return request(`comments?${params}`, z.object({ items: z.array(commentSchema), total: z.number().int().nonnegative(), nextCursor: z.string().nullable(), hasMore: z.boolean() }), signal);
+  },
+  /** 失败重试沿用请求编号；回复只绑定同笔记评论，正文保持纯文本。 */
+  create(recordNo: string, content: string, clientRequestNo: string, replyToCommentNo?: string) {
+    const params = new URLSearchParams({ recordNo });
+    if (replyToCommentNo) params.set("replyToCommentNo", replyToCommentNo);
+    return request(`comments/create?${params}`, commentSchema, undefined, { content, clientRequestNo });
+  },
+  /** 本人删除由后端会话校验，不接受前端指定作者。 */
+  remove(recordNo: string, commentNo: string) {
+    return request(`comments/delete?${new URLSearchParams({ recordNo, commentNo })}`, z.object({ deleted: z.literal(true) }), undefined, {});
+  },
+};
 export const publicNotes = {
   /** 私有收藏与公开列表共用安全卡片模型，查询由后端按当前账号限定。 */
   async favorites(keyword: string, cursor?: string, signal?: AbortSignal) {
