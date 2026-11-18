@@ -49,10 +49,12 @@ def configuration(env):
         raise ValueError("请配置独立前端空间 QINIU_WEB_BUCKET，例如 freeligo-web")
     origin = https_origin(env.get("QINIU_WEB_ORIGIN", ""), "QINIU_WEB_ORIGIN")
     api = https_origin(env.get("VITE_API_BASE_URL", ""), "VITE_API_BASE_URL")
+    management = env.get("VITE_MANAGEMENT_URL", "")
+    if not management.endswith("/#/notes"):
+        raise ValueError("VITE_MANAGEMENT_URL 必须是管理端 HTTPS Hash 地址，例如 https://fed.freeligo.com/#/notes")
+    https_origin(management.removesuffix("/#/notes"), "VITE_MANAGEMENT_URL")
     if env.get("VITE_DATA_SOURCE") != "api":
         raise ValueError("C 端正式发布必须使用 VITE_DATA_SOURCE=api，不能发布 mock 模式")
-    if env.get("QINIU_SPA_FALLBACK_READY") != "true":
-        raise ValueError("先配置页面路由回退和入口不缓存，再设置 QINIU_SPA_FALLBACK_READY=true")
     return {"sha": sha, "bucket": bucket, "origin": origin, "api": api,
             "restore": bool(env.get("RESTORE_SHA"))}
 
@@ -182,9 +184,9 @@ def publish(config, storage, result, dist=Path("dist")):
         result["entry_may_have_changed"] = True
         storage.upload("index.html", entry, immutable=False)
         result["stage"] = "刷新入口缓存"
-        urls = [origin + path for path in ("/", "/index.html", "/opportunities", "/favorites")]
+        urls = [origin + path for path in ("/", "/index.html")]
         storage.refresh(urls)
-        result["stage"] = "验证入口及页面刷新"
+        result["stage"] = "验证根入口"
         deadline = time.monotonic() + 180
         while time.monotonic() < deadline:
             try:
@@ -194,7 +196,7 @@ def publish(config, storage, result, dist=Path("dist")):
             except (OSError, ValueError):
                 pass
             time.sleep(5)
-        raise ValueError("入口或页面路由未返回当前版本，请检查 CDN 缓存及 SPA 回退")
+        raise ValueError("根入口未返回当前版本，请检查默认首页及 CDN 缓存")
 
 
 def summary():
@@ -212,7 +214,7 @@ def summary():
         lines.append("- ⚠️ 入口可能已经更新，缓存/验证未完成；请检查站点，必要时手动恢复保留版本。")
     elif report.get("status") != "success":
         lines.append("- 未收到完整成功报告；上传步骤未开始时不影响现有站点，强制终止时需核对入口状态。")
-    lines.append("\n此结果验证静态文件与路由返回，不代表登录、API 或图片上传业务已验收。\n")
+    lines.append("\n此结果验证静态文件与根入口，Hash 页面路由仍需浏览器验证，不代表登录、API 或图片上传业务已验收。\n")
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
         output.write("\n".join(lines))
 

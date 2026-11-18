@@ -90,7 +90,7 @@ async function login() {
     <div class="account-login__agreements">
       <p v-if="protocols.isPending.value" role="status">正在加载协议…</p>
       <p v-else-if="protocols.isError.value" role="alert">协议加载失败，<button type="button" @click="protocols.refetch()">重试</button></p>
-      <label v-else><input v-model="agreed" type="checkbox" :disabled="busy || sending" aria-label="同意用户协议和隐私政策" /><span>我已阅读并同意 <a :href="`/legal/terms/${terms?.version}`" target="_blank" rel="noopener">《用户协议》</a>和<a :href="`/legal/privacy/${privacy?.version}`" target="_blank" rel="noopener">《隐私政策》</a></span></label>
+      <label v-else><input v-model="agreed" type="checkbox" :disabled="busy || sending" aria-label="同意用户协议和隐私政策" /><span>我已阅读并同意 <a :href="`/#/legal/terms/${terms?.version}`" target="_blank" rel="noopener">《用户协议》</a>和<a :href="`/#/legal/privacy/${privacy?.version}`" target="_blank" rel="noopener">《隐私政策》</a></span></label>
     </div>
     <button class="account-login__submit" type="submit" :disabled="busy || sending">{{ busy ? '登录中…' : '登录' }}</button>
     <p class="account-login__hint">{{ mode === 'password' ? '尚未设置密码？可切换验证码登录' : '验证码仅用于本次登录，请勿向他人透露' }}</p>
