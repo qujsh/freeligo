@@ -244,7 +244,7 @@ function submitSearch() {
     />
     <main
       class="notes-main"
-      :class="{ 'notes-main--personal': isMine || isFavorites }"
+      :class="{ 'notes-main--personal': isMine || isFavorites, 'notes-main--growth': isGrowth }"
     >
       <AccountSettings
         v-if="isSettings"
@@ -458,9 +458,14 @@ function submitSearch() {
         </p>
       </section>
       <footer class="notes-footer">
-        生活里的小发现，值得被看见。
-        <span v-if="isMock">当前为演示模式</span>
-        <span><router-link to="/legal/terms" target="_blank">用户协议</router-link> · <router-link to="/legal/privacy" target="_blank">隐私政策</router-link></span>
+        <p class="notes-footer__tagline">生活里的小发现，值得被看见。</p>
+        <span v-if="isMock" class="notes-footer__demo">当前为演示模式</span>
+        <nav class="notes-footer__links" aria-label="法律与隐私">
+          <router-link to="/legal/terms" target="_blank" rel="noopener noreferrer">用户协议</router-link>
+          <span aria-hidden="true">·</span>
+          <router-link to="/legal/privacy" target="_blank" rel="noopener noreferrer">隐私政策</router-link>
+        </nav>
+        <a class="notes-footer__filing" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2026100144号-1</a>
       </footer>
     </main>
     <el-dialog
