@@ -1,6 +1,7 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 export const router = createRouter({
-  history: createWebHistory(),
+  // 页面固定从空间根入口加载，不能将 Vite 的版本资源 base 用作页面路径。
+  history: createWebHashHistory("/"),
   scrollBehavior(to, from, saved) {
     if (to.path === from.path) return;
     return saved ?? { top: 0 };

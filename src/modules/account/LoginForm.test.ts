@@ -15,7 +15,7 @@ it("默认不勾选，链接固定版本，接受后提交精确编号；新版�
   await flushPromises();
   await vi.waitFor(() => expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true));
   expect(wrapper.get('input[type="checkbox"]').element).toHaveProperty("checked", false);
-  expect(wrapper.find('a[href="/legal/terms/2"]').exists()).toBe(true);
+  expect(wrapper.find('a[href="/#/legal/terms/2"]').exists()).toBe(true);
   await wrapper.get("form").trigger("submit");
   expect(signIn).not.toHaveBeenCalled();
   expect(wrapper.get('[role="alert"]').text()).toContain("请先阅读并同意");
@@ -27,6 +27,6 @@ it("默认不勾选，链接固定版本，接受后提交精确编号；新版�
   client.setQueryData(["legal", "login-current"], [{ ...docs[0], id: 30, version: 3 }, docs[1]]);
   await flushPromises();
   expect(wrapper.get('input[type="checkbox"]').element).toHaveProperty("checked", false);
-  expect(wrapper.find('a[href="/legal/terms/3"]').exists()).toBe(true);
+  expect(wrapper.find('a[href="/#/legal/terms/3"]').exists()).toBe(true);
   wrapper.unmount(); client.clear();
 });

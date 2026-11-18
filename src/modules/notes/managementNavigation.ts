@@ -6,14 +6,19 @@ export function buildManagementNoteUrl(configured: string | undefined, pageUrl: 
   if (!configuredUrl && !(development && loopback(page.hostname))) {
     throw new Error("管理端地址尚未配置，请配置 VITE_MANAGEMENT_URL");
   }
-  const target = new URL(configuredUrl || `${page.protocol}//${page.hostname}:4173/notes`);
+  const target = new URL(configuredUrl || `${page.protocol}//${page.hostname}:4173/#/notes`);
   if (!["http:", "https:"].includes(target.protocol) || target.username || target.password) {
     throw new Error("管理端地址必须是有效的 HTTP 或 HTTPS 地址");
   }
   if (development && loopback(page.hostname) && loopback(target.hostname)) target.hostname = page.hostname;
-  target.searchParams.delete("compose");
-  if (view) target.searchParams.set("view", view);
-  else target.searchParams.delete("view");
+  // 兼容旧 /notes 配置；筛选参数属于 Hash 内的路由，不能放在 # 前面。
+  const route = new URL(target.hash.startsWith("#/") ? target.hash.slice(1) : target.pathname + target.search, target.origin);
+  if (!target.hash.startsWith("#/")) target.pathname = "/";
+  target.search = "";
+  route.searchParams.delete("compose");
+  if (view) route.searchParams.set("view", view);
+  else route.searchParams.delete("view");
+  target.hash = route.pathname + route.search;
   return target.href;
 }
 export function managementNoteUrl(view?: "trash") {
