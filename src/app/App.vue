@@ -23,7 +23,7 @@ const session = useSession(),
   client = useQueryClient(),
   router = useRouter();
 onMounted(() => {
-  if (route.path !== "/") void session.restore();
+  void session.restore();
 });
 async function reset() {
   try {
@@ -48,7 +48,7 @@ function publish() {
 </script>
 <template>
   <el-config-provider :locale="zhCn">
-    <header v-if="route.path !== '/'" class="site-header reference-header">
+    <header v-if="route.path !== '/' && !route.path.startsWith('/legal/')" class="site-header reference-header">
       <router-link class="brand" to="/" aria-label="自由人联合体首页">
         <UnionLogo />
         <span>
@@ -138,7 +138,7 @@ function publish() {
       </div>
     </header>
     <router-view />
-    <footer v-if="route.path !== '/'" class="site-footer">
+    <footer v-if="route.path !== '/' && !route.path.startsWith('/legal/')" class="site-footer">
       <router-link class="brand" to="/">自由人联合体</router-link>
       <p>
         {{
@@ -176,11 +176,13 @@ function publish() {
     </el-dialog>
     <el-dialog
       :model-value="session.loginOpen"
-      :title="isLive ? '登录并继续' : '以演示身份继续'"
-      width="min(420px, 92vw)"
+      :title="isLive ? '' : '以演示身份继续'"
+      :style="isLive ? { '--el-dialog-border-radius': '24px', '--el-dialog-padding-primary': '24px', '--el-dialog-bg-color': '#fffcf9' } : undefined"
+      align-center
+      :width="isLive ? 'min(440px, 92vw)' : 'min(480px, 92vw)'"
       @close="session.cancel"
     >
-      <LoginForm v-if="isLive" @logged-in="client.invalidateQueries()" />
+      <LoginForm v-if="isLive && session.loginOpen" @logged-in="client.invalidateQueries()" />
       <template v-else>
         <p class="muted">原型不收集手机号，也不会进行真实登录。</p>
         <button

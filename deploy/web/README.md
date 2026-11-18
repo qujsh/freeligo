@@ -32,6 +32,7 @@ Repository variables：
 | 名称 | 示例/要求 |
 | --- | --- |
 | `QINIU_WEB_ORIGIN` | `https://www.example.com`，C 端域名，不附加路径 |
+| `VITE_MANAGEMENT_URL` | 管理端笔记页完整 HTTPS 地址，例如 `https://work.example.com/notes`；两端使用相同会话 API |
 | `VITE_API_BASE_URL` | `https://api.example.com`，不附加 `/api` |
 | `QINIU_SPA_FALLBACK_READY` | 完成页面回退和缓存配置后填写 `true` |
 

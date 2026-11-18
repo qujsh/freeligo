@@ -1,4 +1,5 @@
 import { isLive } from "../../services/publicTasks";
+import { legal, type LegalAcceptance } from "../../services/legal";
 import { account } from "../../services/taskInteractions";
 import { defineStore } from "pinia";
 import { ref } from "vue";
@@ -16,7 +17,14 @@ export const useSession = defineStore("demo-session", () => {
   } catch {
     /* no session */
   }
+  let restored = !isLive;
+  let restoring: Promise<void> | undefined;
+  /** 先等待Cookie会话恢复，再决定是否弹窗；取消登录时不执行此前的业务动作。 */
   function requireLogin(action: () => void) {
+    if (!restored) {
+      void restore().then(() => requireLogin(action));
+      return;
+    }
     if (user.value) action();
     else {
       continuation = action;
@@ -42,8 +50,17 @@ export const useSession = defineStore("demo-session", () => {
     user.value = null;
     sessionStorage.removeItem("freeligo.demo-user");
   }
-  async function restore() {
-    if (!isLive) return;
+  /** 合并并发恢复请求；互动遇到401时可强制重查，失败清空前端身份而不伪造登录。 */
+  function restore(force = false): Promise<void> {
+    if (!isLive || (restored && !force)) return Promise.resolve();
+    if (restoring) return restoring;
+    restoring = restoreUser().finally(() => {
+      restored = true;
+      restoring = undefined;
+    });
+    return restoring;
+  }
+  async function restoreUser() {
     try {
       const v = await account.me();
       user.value = { id: v.userNo, name: v.nickname };
@@ -51,8 +68,10 @@ export const useSession = defineStore("demo-session", () => {
       user.value = null;
     }
   }
-  async function signIn(phone: string, code: string) {
-    const v = await account.login(phone, code);
+  /** 两种登录共享会话落地与待执行操作；密码仅随请求传递，不存储。 */
+  async function signIn(phone: string, credential: string, mode: "sms" | "password" = "sms", acceptance?: LegalAcceptance) {
+    if (!acceptance) throw new Error("请先阅读并同意用户协议和隐私政策");
+    const v = await legal.login(phone, credential, mode, acceptance);
     user.value = { id: v.userNo, name: v.nickname };
     loginOpen.value = false;
     const action = continuation;

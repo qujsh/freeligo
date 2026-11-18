@@ -1,0 +1,22 @@
+import { mount } from "@vue/test-utils";
+import { afterEach, expect, it, vi } from "vitest";
+import AccountMenu from "./AccountMenu.vue";
+afterEach(() => vi.useRealTimers());
+it("鼠标悬停展开，跨越菜单间隙取消关闭，离开收起；点击入口直接登录", async () => {
+  vi.useFakeTimers();
+  const wrapper = mount(AccountMenu, { props: { noteCount: 0, live: true, personal: false }, global: { stubs: { Transition: false } } });
+  const root = wrapper.get('.account-menu');
+  await root.trigger('pointerenter', { pointerType: 'mouse' });
+  expect(wrapper.find('[role="menu"]').exists()).toBe(true);
+  await root.trigger('pointerleave', { pointerType: 'mouse' });
+  await vi.advanceTimersByTimeAsync(80);
+  await root.trigger('pointerenter', { pointerType: 'mouse' });
+  await vi.advanceTimersByTimeAsync(200);
+  expect(wrapper.get('button[aria-haspopup="menu"]').attributes('aria-expanded')).toBe('true');
+  await root.trigger('pointerleave', { pointerType: 'mouse' });
+  await vi.advanceTimersByTimeAsync(200);
+  expect(wrapper.get('button[aria-haspopup="menu"]').attributes('aria-expanded')).toBe('false');
+  await wrapper.get('button[aria-haspopup="menu"]').trigger('click');
+  expect(wrapper.emitted('login')).toHaveLength(1);
+  wrapper.unmount();
+});

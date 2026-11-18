@@ -4,7 +4,7 @@ export const sampleNotes: Note[] = [
     id: "books",
     title: "给独立书店拍照，我怎么处理反光",
     summary:
-      "窗边光线很好，但玻璃反光常常把室内细节都吃掉。分享我这次的拍摄设置和小技巧。",
+      "窗边光线很好，但玻璃反光常常把室内细节都吃掉。笔记我这次的拍摄设置和小技巧。",
     category: "photography",
     tags: ["摄影影像", "拍摄技巧"],
     author: "林川",
