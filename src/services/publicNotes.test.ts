@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { publicNotes, publicMediaUrl } from "./publicNotes";
+const apiBase = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const card = {
   recordNo: "SHARE-1",
   title: null,
@@ -39,7 +40,7 @@ it("maps real media and nullable titles, binds search and cursor, propagates can
     titleIsExcerpt: true,
     author: "公开作者",
     remote: true,
-    imageUrl: card.coverUrl,
+    imageUrl: `${apiBase}${card.coverUrl}`,
     tags: [],
   });
 });
